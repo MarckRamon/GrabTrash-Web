@@ -36,8 +36,8 @@ const greenIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-// API base URL - updating to match backend URL
-const API_BASE_URL = 'http://localhost:8080';
+// API base URL - updating to match axios baseURL
+const API_BASE_URL = 'https://grabtrash-backend.onrender.com/api';
 
 // Get JWT token from localStorage
 const getAuthHeader = () => {
@@ -109,7 +109,7 @@ function CollectionPoints() {
   const fetchCollectionPoints = async () => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/api/pickup-locations`,
+        `${API_BASE_URL}/pickup-locations`,
         {
           headers: getAuthHeader(),
           withCredentials: true
@@ -137,7 +137,7 @@ function CollectionPoints() {
   const fetchPrivateEntities = async () => {
       try {
           const response = await axios.get(
-              `${API_BASE_URL}/api/private-entities`, // Assuming this endpoint exists
+              `${API_BASE_URL}/private-entities`, // Assuming this endpoint exists
               {
                   headers: getAuthHeader(),
                   withCredentials: true
@@ -166,7 +166,7 @@ function CollectionPoints() {
   const fetchJobOrders = async () => {
       try {
           const response = await axios.get(
-              `${API_BASE_URL}/api/payments`, // Endpoint for job orders/payments
+              `${API_BASE_URL}/payments`, // Endpoint for job orders/payments
               {
                   headers: getAuthHeader(),
                   withCredentials: true
@@ -243,7 +243,7 @@ function CollectionPoints() {
       console.log('Sending data:', locationData);
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/pickup-locations`, 
+        `${API_BASE_URL}/pickup-locations`, 
         locationData,
         {
           headers: getAuthHeader(),
@@ -307,7 +307,7 @@ function CollectionPoints() {
 
       const response = await axios({
         method: 'delete',
-        url: `${API_BASE_URL}/api/pickup-locations/${id}`,
+        url: `${API_BASE_URL}/pickup-locations/${id}`,
         headers: getAuthHeader(),
         withCredentials: true
       });
@@ -353,7 +353,7 @@ function CollectionPoints() {
       console.log('Sending update data:', updateData);
 
       const response = await axios.put(
-        `${API_BASE_URL}/api/pickup-locations/${markerId}`,
+        `${API_BASE_URL}/pickup-locations/${markerId}`,
         updateData,
         {
           headers: getAuthHeader(),
