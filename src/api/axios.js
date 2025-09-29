@@ -2,9 +2,8 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  // When using the Vite proxy, we can use relative URLs
-  // The proxy in vite.config.js will handle forwarding /api requests to the actual backend
-  baseURL: 'http://localhost:8080/api',
+  // Using the hosted backend API
+  baseURL: 'https://grabtrash-backend.onrender.com/api',
   headers: {
     'Content-Type': 'application/json'
   }
