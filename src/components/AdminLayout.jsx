@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Avatar } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../api/axios';
 import {
   TrendingUp,
   LocationOn,
@@ -18,6 +19,7 @@ const AdminLayout = ({ children }) => {
     firstName: '',
     lastName: '',
     email: '',
+    profileImageUrl: '',
   });
   const [role, setRole] = useState(null);
 
@@ -75,14 +77,52 @@ const AdminLayout = ({ children }) => {
           firstName: userData.firstName || '',
           lastName: userData.lastName || '',
           email: userData.email || '',
+          profileImageUrl: userData.profileImageUrl || userData.profileImage || '',
         });
+
+        // Attempt to fetch latest profile (including profile image) from backend
+        if (userData.userId) {
+          api.get(`/users/profile/${userData.userId}`)
+            .then((res) => {
+              const profile = res?.data || {};
+              const image = profile.profileImage || profile.profileImageUrl || profile.photoUrl || '';
+              if (image) {
+                setUserProfile((prev) => ({
+                  ...prev,
+                  firstName: profile.firstName || prev.firstName,
+                  lastName: profile.lastName || prev.lastName,
+                  email: profile.email || prev.email,
+                  profileImageUrl: image,
+                }));
+                // Persist to localStorage so it survives reloads
+                const updatedUser = {
+                  ...userData,
+                  firstName: profile.firstName || userData.firstName,
+                  lastName: profile.lastName || userData.lastName,
+                  email: profile.email || userData.email,
+                  profileImage: image,
+                  profileImageUrl: image,
+                };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
+            })
+            .catch(() => {
+              // Ignore; we'll rely on localStorage
+            });
+        }
       } catch (error) {
         console.error('Error fetching user profile:', error);
       }
     };
 
     const handleProfileUpdate = (event) => {
-      setUserProfile(event.detail);
+      setUserProfile((prev) => ({
+        ...prev,
+        firstName: event.detail.firstName ?? prev.firstName,
+        lastName: event.detail.lastName ?? prev.lastName,
+        email: event.detail.email ?? prev.email,
+        profileImageUrl: event.detail.photoUrl ?? event.detail.profileImageUrl ?? prev.profileImageUrl,
+      }));
     };
 
     // Initial profile fetch
@@ -283,7 +323,7 @@ const AdminLayout = ({ children }) => {
             onClick={() => navigate('/profile')}
           >
             <Avatar 
-              src="/migz.jpg"
+              src={userProfile.profileImageUrl || '/migz.jpg'}
               sx={{ 
                 width: 40, 
                 height: 40,

@@ -70,6 +70,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
+      const url = config.url || '';
+      const isAuthEndpoint = url.includes('/users/login') || url.includes('/users/register') || url.includes('/users/refresh');
       // Check if token is expired
       const decoded = decodeJwt(token);
       if (decoded && isTokenExpired(decoded)) {
@@ -77,9 +79,16 @@ api.interceptors.request.use(
         clearAuthTokens();
         // Allow this request to proceed without token, it will likely fail with 401
       } else {
-        // Token is valid, add it to the request
-        console.log('🔑 Adding auth token to request');
-        config.headers.Authorization = `Bearer ${token}`;
+        // Token is valid. Do not attach auth header to auth endpoints
+        if (!isAuthEndpoint) {
+          console.log('🔑 Adding auth token to request');
+          config.headers.Authorization = `Bearer ${token}`;
+        } else {
+          // Ensure no stale header leaks to login
+          if (config.headers && config.headers.Authorization) {
+            delete config.headers.Authorization;
+          }
+        }
       }
     } else {
       console.log('⚠️ No auth token found for request to:', config.url);
