@@ -6,13 +6,22 @@ import {
   Select,
   MenuItem,
   Paper,
+  Chip,
+  Avatar,
+  IconButton,
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
 import AdminLayout from './components/AdminLayout';
 import api from './api/axios';
 import { useNavigate } from 'react-router-dom';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PeopleIcon from '@mui/icons-material/People';
+import DeleteIcon from '@mui/icons-material/Delete';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 
-// Mock data for the chart
 const monthlyData = [
   { month: 'JAN', value: 100 },
   { month: 'FEB', value: 150 },
@@ -24,8 +33,8 @@ const monthlyData = [
   { month: 'AUG', value: 100 },
   { month: 'SEP', value: 180 },
   { month: 'OCT', value: 260 },
-  { month: 'NOV', value: 300 },
-  { month: 'DEC', value: 350 },
+  { month: 'NOV', value: 340 },
+  { month: 'DEC', value: 400 },
 ];
 
 const AdminDashboard = () => {
@@ -45,7 +54,6 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         if (isAdmin) {
-          // Admin-only API calls
           const usersResponse = await api.get('/users/total-active');
           setTotalActiveUsers(usersResponse.data.totalActiveUsers || 0);
 
@@ -60,13 +68,11 @@ const AdminDashboard = () => {
             setTotalCollectionPoints(0);
           }
         } else {
-          // For private_entity, only fetch what is allowed (e.g., collection points)
           setTotalActiveUsers(0);
           setTotalPickupTrash(0);
           setTotalCollectionPoints(0);
         }
       } catch (error) {
-        // Handle error
         setTotalActiveUsers(0);
         setTotalPickupTrash(0);
         setTotalCollectionPoints(0);
@@ -76,376 +82,607 @@ const AdminDashboard = () => {
   }, [isAdmin]);
 
   useEffect(() => {
-    // Fetch barangays for calendar
-    if (!isAdmin) return; // Only admin can see barangay calendar
+    if (!isAdmin) return;
     const fetchBarangays = async () => {
       try {
         const res = await api.get('/barangays');
-        const brgys = Array.isArray(res.data) ? res.data : [res.data];
+        const brgys = Array.isArray(res.data) ? res.data : [];
         setBarangays(brgys);
-        if (brgys.length > 0) setSelectedBarangay(brgys[0]);
-      } catch (e) {
-        setBarangays([]);
+        if (brgys.length > 0) {
+          setSelectedBarangay(brgys[0].barangay_id || brgys[0].barangayId);
+        }
+      } catch (err) {
+        console.error('Error fetching barangays:', err);
       }
     };
     fetchBarangays();
   }, [isAdmin]);
 
   useEffect(() => {
-    // Fetch schedules for selected barangay
-    if (!isAdmin) return;
-    if (!selectedBarangay) return;
-    const fetchSchedules = async () => {
+    if (!selectedBarangay || !isAdmin) return;
+    const fetchBarangaySchedules = async () => {
       try {
-        const res = await api.get(`/collection-schedules/barangay/${selectedBarangay.barangayId}`);
-        setBarangaySchedules(Array.isArray(res.data) ? res.data : [res.data]);
-      } catch (e) {
+        const res = await api.get(`/collection-schedules/barangay/${selectedBarangay}`);
+        const schedules = Array.isArray(res.data) ? res.data : [];
+        setBarangaySchedules(schedules);
+      } catch (err) {
+        console.error('Error fetching barangay schedules:', err);
         setBarangaySchedules([]);
       }
     };
-    fetchSchedules();
+    fetchBarangaySchedules();
   }, [selectedBarangay, isAdmin]);
 
   useEffect(() => {
-    // Fetch top barangays (allowed for both roles)
+    if (!isAdmin) return;
     const fetchTopBarangays = async () => {
       try {
         const res = await api.get('/payments/top-barangays');
-        setTopBarangays(Array.isArray(res.data) ? res.data : []);
-      } catch (e) {
+        const top = Array.isArray(res.data) ? res.data : [];
+        console.log('🏆 Top Barangays Response:', top);
+        setTopBarangays(top);
+      } catch (err) {
+        console.error('Error fetching top barangays:', err);
         setTopBarangays([]);
       }
     };
     fetchTopBarangays();
-  }, []);
+  }, [isAdmin]);
 
-  // Helper: get all booked days in current month
-  const getBookedDays = () => {
-    const booked = new Set();
-    barangaySchedules.forEach(sch => {
-      if (sch.collectionDateTime) {
-        const date = new Date(sch.collectionDateTime);
-        booked.add(date.getDate());
-      }
-      // Optionally handle recurring schedules here
-    });
-    return booked;
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const monthName = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const isDateBooked = (dayNum) => {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum + 1).padStart(2, '0')}`;
+    return barangaySchedules.some(s => 
+      s.collection_date?.startsWith(dateStr) || 
+      s.collectionDateTime?.startsWith(dateStr)
+    );
   };
-  const bookedDays = getBookedDays();
+
+  const StatCard = ({ title, value, icon: Icon, gradient, percentage, delay }) => (
+    <Paper
+      sx={{
+        p: 3.5,
+        borderRadius: '24px',
+        background: gradient,
+        border: 'none',
+        boxShadow: '0 10px 40px rgba(46, 125, 50, 0.12)',
+        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        position: 'relative',
+        overflow: 'hidden',
+        animation: `slideUp 0.6s ease-out ${delay}s backwards`,
+        '@keyframes slideUp': {
+          from: { opacity: 0, transform: 'translateY(30px)' },
+          to: { opacity: 1, transform: 'translateY(0)' },
+        },
+        '&:hover': {
+          transform: 'translateY(-12px) scale(1.02)',
+          boxShadow: '0 20px 60px rgba(46, 125, 50, 0.2)',
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '150px',
+          height: '150px',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)',
+          borderRadius: '50%',
+          transform: 'translate(40%, -40%)',
+        },
+      }}
+    >
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
+          <Box>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'rgba(255,255,255,0.9)',
+                fontWeight: 600,
+                mb: 1.5,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                fontSize: '0.7rem',
+              }}
+            >
+              {title}
+            </Typography>
+            <Typography 
+              variant="h2" 
+              sx={{ 
+                fontWeight: 900,
+                color: 'white',
+                letterSpacing: '-2px',
+                textShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              }}
+            >
+              {value}
+            </Typography>
+          </Box>
+          <Box sx={{
+            width: 64,
+            height: 64,
+            borderRadius: '20px',
+            background: 'rgba(255, 255, 255, 0.25)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+          }}>
+            <Icon sx={{ color: 'white', fontSize: 32 }} />
+          </Box>
+        </Box>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.8,
+          bgcolor: 'rgba(255,255,255,0.2)',
+          borderRadius: '12px',
+          px: 1.5,
+          py: 0.8,
+          backdropFilter: 'blur(10px)',
+          width: 'fit-content',
+        }}>
+          <ArrowUpwardIcon sx={{ color: 'white', fontSize: 16, fontWeight: 'bold' }} />
+          <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: '0.75rem' }}>
+            {percentage}% from last month
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
+  );
 
   return (
     <AdminLayout>
-      {/* Reports Header */}
-      <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-        Reports
-      </Typography>
-
-      {/* Timeframe Selector */}
-      <Box sx={{ mb: 4 }}>
-        <Select
-          value="all-time"
-          fullWidth
-          sx={{
-            bgcolor: 'white',
-            '& .MuiSelect-select': { py: 1.5 },
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-          }}
-        >
-          <MenuItem value="all-time">Timeframe: All-time</MenuItem>
-        </Select>
-      </Box>
-
-      {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {isAdmin && (
-          <Grid item xs={12} sm={4}>
-            <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontSize: '14px' }}>
-                Active Users
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, color: '#333' }}>
-                {totalActiveUsers}
-              </Typography>
-            </Paper>
-          </Grid>
-        )}
-        <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontSize: '14px' }}>
-              Total Pickup Trash Ordered
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: '#333' }}>
-              {totalPickupTrash.toLocaleString()}
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontSize: '14px' }}>
-              Total Collection Points
-            </Typography>
-            <Typography variant="h4" sx={{ fontWeight: 600, color: '#333' }}>
-              {totalCollectionPoints.toLocaleString()}
-            </Typography>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {/* Two Column Layout */}
-      <Grid container spacing={3}>
-        {/* Left Column - Location Stats */}
-        <Grid item xs={12} md={5}>
-          <Paper 
-            sx={{ 
-              p: 3, 
-              borderRadius: 2, 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              height: 'fit-content',
-              bgcolor: 'white',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-              Top Most Ordered Location Pickup
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {topBarangays.map((barangay, index) => {
-                const barangayName = barangays.find(b => b.barangayId === barangay.barangayId)?.name || barangay.barangayId;
-                return (
-                  <Box key={barangay.barangayId}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box
-                        component="span"
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: '#f1f5f9',
-                          borderRadius: 1,
-                          mr: 2,
-                          fontSize: '24px'
-                        }}
-                      >
-                        🚛
-                      </Box>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: '#333', 
-                          fontWeight: 500,
-                          fontSize: '16px',
-                        }}
-                      >
-                        {barangayName}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ position: 'relative', height: 8, width: '100%', mb: 1 }}>
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '100%',
-                          borderRadius: 4,
-                          bgcolor: '#E8F5E9',
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: `${(barangay.count / (topBarangays[0]?.count || 1)) * 100}%`,
-                          height: '100%',
-                          borderRadius: 4,
-                          background: 'linear-gradient(90deg, #4CAF50 0%, #43A047 100%)',
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: '#333', 
-                          fontWeight: 500,
-                          fontSize: '16px',
-                        }}
-                      >
-                        {barangay.count.toLocaleString()}
-                      </Typography>
-                    </Box>
-                  </Box>
-                );
-              })}
+      <Box sx={{ 
+        p: { xs: 2, sm: 3, md: 4 },
+        background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #e8f5e9 100%)',
+        minHeight: '100vh',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '300px',
+          background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(104, 159, 56, 0.05) 100%)',
+          borderRadius: '0 0 50% 50%',
+          zIndex: 0,
+        },
+      }}>
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ mb: 5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Box sx={{
+                width: 6,
+                height: 48,
+                background: 'linear-gradient(180deg, #2e7d32 0%, #43a047 100%)',
+                borderRadius: '10px',
+              }} />
+              <Box>
+                <Typography 
+                  variant="h3" 
+                  sx={{ 
+                    fontWeight: 900,
+                    background: 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    letterSpacing: '-1px',
+                  }}
+                >
+                  Dashboard Overview
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#558b2f', fontWeight: 500, mt: 0.5 }}>
+                  Monitor your waste management operations in real-time
+                </Typography>
+              </Box>
             </Box>
-          </Paper>
-        </Grid>
-
-        {/* Right Column - Activity and Calendar */}
-        {isAdmin && (
-        <Grid item xs={12} md={7}>
-          {/* Activity Chart */}
-          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', mb: 3, bgcolor: 'white' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#333' }}>
-                Activity
-              </Typography>
-              <Select
-                value="month"
-                size="small"
-                sx={{ 
-                  minWidth: 100,
-                  '.MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#4CAF50',
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#43A047',
-                  },
-                  color: '#4CAF50',
-                  fontSize: '14px',
-                }}
-              >
-                <MenuItem value="month">Month</MenuItem>
-              </Select>
-            </Box>
-            <Box sx={{ height: 250, mt: 2 }}>
-              <BarChart
-                series={[
-                  {
-                    data: monthlyData.map(item => item.value),
-                    color: '#4CAF50',
-                    highlightScope: {
-                      highlighted: 'item',
-                    },
-                    barRoundness: 0.5,
-                  },
-                ]}
-                xAxis={[{
-                  data: monthlyData.map(item => item.month),
-                  scaleType: 'band',
-                  tickLabelStyle: {
-                    color: '#64748B',
-                    fontSize: 12,
-                  },
-                }]}
-                yAxis={[{
-                  tickLabelStyle: {
-                    color: '#64748B',
-                    fontSize: 12,
-                  },
-                }]}
-                height={250}
-                margin={{ top: 10, bottom: 30, left: 40, right: 10 }}
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 2,
+              mt: 3,
+            }}>
+              <Chip 
+                icon={<CalendarTodayIcon />}
+                label={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 sx={{
-                  '.MuiChartsAxis-line': { stroke: '#e2e8f0' },
-                  '.MuiChartsAxis-tick': { stroke: '#e2e8f0' },
-                  '.MuiBarElement-root:hover': {
-                    filter: 'brightness(0.9)',
-                  },
+                  bgcolor: 'white',
+                  color: '#2e7d32',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  py: 2.5,
+                  px: 1,
+                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.1)',
+                  '& .MuiChip-icon': { color: '#43a047' },
                 }}
               />
-            </Box>
-          </Paper>
-
-          {/* Calendar */}
-          <Paper sx={{ p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-            {/* Barangay Selector */}
-            <Box sx={{ mb: 2 }}>
               <Select
-                value={selectedBarangay?.barangayId || ''}
-                onChange={e => {
-                  const brgy = barangays.find(b => b.barangayId === e.target.value);
-                  setSelectedBarangay(brgy);
+                value="all-time"
+                sx={{
+                  minWidth: 220,
+                  bgcolor: 'white',
+                  borderRadius: '16px',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.1)',
+                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  '&:hover': { boxShadow: '0 6px 20px rgba(46, 125, 50, 0.15)' },
                 }}
-                fullWidth
-                size="small"
-                sx={{ bgcolor: 'white' }}
               >
-                {barangays.map(b => (
-                  <MenuItem key={b.barangayId} value={b.barangayId}>{b.name}</MenuItem>
-                ))}
+                <MenuItem value="all-time">📊 Timeframe: All-time</MenuItem>
+                <MenuItem value="month">📅 This Month</MenuItem>
+                <MenuItem value="week">📆 This Week</MenuItem>
+                <MenuItem value="today">⏰ Today</MenuItem>
               </Select>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#333' }}>
-                March
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 400, color: '#333', ml: 1 }}>
-                2021
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gap: 1,
-              textAlign: 'center',
-            }}>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <Typography key={day} sx={{ color: '#64748B', fontSize: '0.875rem', fontWeight: 500, mb: 1 }}>
-                  {day}
-                </Typography>
-              ))}
-              {Array.from({ length: 35 }, (_, i) => {
-                const dayNum = i - 1;
-                const isValid = dayNum >= 0 && dayNum < 31;
-                const isToday = dayNum + 1 === new Date().getDate();
-                const isBooked = bookedDays.has(dayNum + 1);
-                return (
-                  <Box 
-                    key={i}
-                    sx={{ 
-                      p: 1.5,
-                      position: 'relative',
-                      cursor: isBooked ? 'pointer' : 'default',
-                      borderRadius: 1,
-                      bgcolor: isToday ? '#EEF2FF' : 'transparent',
-                      border: isToday ? '1px solid #4CAF50' : 'none',
-                      '&:hover': {
-                        bgcolor: isToday ? '#EEF2FF' : isBooked ? '#E8F5E9' : '#f1f5f9',
-                      },
-                    }}
-                    onClick={() => isBooked && navigate('/collection-schedule')}
-                  >
-                    {isValid && (
-                      <>
-                        <Typography 
-                          sx={{ 
-                            fontSize: '0.875rem', 
-                            color: isToday ? '#4CAF50' : '#333',
-                            fontWeight: isToday ? 600 : 400,
-                          }}
-                        >
-                          {dayNum + 1}
-                        </Typography>
-                        {isBooked && (
-                          <Typography 
-                            sx={{ 
-                              fontSize: '0.65rem',
-                              color: '#388e3c',
-                              mt: 0.5,
-                              bgcolor: '#E8F5E9',
-                              borderRadius: '4px',
-                              py: 0.25,
-                              px: 0.5,
-                            }}
-                          >
-                            Booked
-                          </Typography>
-                        )}
-                      </>
-                    )}
+          </Box>
+
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Active Users"
+                value={totalActiveUsers}
+                icon={PeopleIcon}
+                gradient="linear-gradient(135deg, #66bb6a 0%, #43a047 100%)"
+                percentage="12"
+                delay={0}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Pickup Orders"
+                value={totalPickupTrash}
+                icon={DeleteIcon}
+                gradient="linear-gradient(135deg, #26a69a 0%, #00897b 100%)"
+                percentage="18"
+                delay={0.1}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <StatCard
+                title="Collection Points"
+                value={totalCollectionPoints}
+                icon={LocationOnIcon}
+                gradient="linear-gradient(135deg, #7cb342 0%, #689f38 100%)"
+                percentage="8"
+                delay={0.2}
+              />
+            </Grid>
+          </Grid>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={5}>
+              <Paper
+                sx={{
+                  p: 4,
+                  borderRadius: '24px',
+                  background: 'white',
+                  border: 'none',
+                  boxShadow: '0 10px 40px rgba(46, 125, 50, 0.12)',
+                  height: '100%',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #66bb6a 0%, #43a047 100%)',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Box>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#1b5e20', mb: 0.5 }}>
+                      🏆 Top Locations
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#757575' }}>
+                      Most active pickup points
+                    </Typography>
                   </Box>
-                );
-              })}
-            </Box>
-          </Paper>
-        </Grid>
-        )}
-      </Grid>
+                  <IconButton sx={{ bgcolor: '#f1f8f4', '&:hover': { bgcolor: '#e8f5e9' } }}>
+                    <MoreVertIcon sx={{ color: '#43a047' }} />
+                  </IconButton>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {topBarangays.length === 0 ? (
+                    <Typography sx={{ color: '#757575', textAlign: 'center', py: 4 }}>
+                      No data available
+                    </Typography>
+                  ) : (
+                    topBarangays.slice(0, 3).map((barangay, index) => {
+                      const barangayId = barangay.barangayId;
+                      const barangayData = barangays.find(b => 
+                        (b.barangay_id === barangayId) || 
+                        (b.barangayId === barangayId) ||
+                        (b.id === barangayId)
+                      );
+                      
+                      const barangayName = barangayData?.name || 
+                                          barangayData?.barangay_name || 
+                                          barangayData?.barangayName ||
+                                          barangayId || 
+                                          'Unknown';
+                      
+                      console.log(`✅ Barangay ${index}: ID="${barangayId}", Name="${barangayName}"`);
+                      
+                      const percentage = (barangay.count / (topBarangays[0]?.count || 1)) * 100;
+                      const colors = [
+                        { bg: 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)', badge: '#1b5e20' },
+                        { bg: 'linear-gradient(135deg, #81c784 0%, #66bb6a 100%)', badge: '#2e7d32' },
+                        { bg: 'linear-gradient(135deg, #a5d6a7 0%, #81c784 100%)', badge: '#388e3c' },
+                      ];
+                      return (
+                        <Box key={`top-barangay-${index}`}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Avatar sx={{
+                                width: 50,
+                                height: 50,
+                                background: colors[index].bg,
+                                fontWeight: 800,
+                                fontSize: '1.2rem',
+                                boxShadow: '0 4px 12px rgba(46, 125, 50, 0.3)',
+                              }}>
+                                #{index + 1}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="body1" sx={{ color: '#212121', fontWeight: 700, fontSize: '1rem' }}>
+                                  {barangayName}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#757575' }}>
+                                  {percentage.toFixed(0)}% of total orders
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Chip 
+                              label={barangay.count.toLocaleString()}
+                              sx={{
+                                bgcolor: colors[index].badge,
+                                color: 'white',
+                                fontWeight: 800,
+                                fontSize: '0.85rem',
+                                height: '32px',
+                              }}
+                            />
+                          </Box>
+                          <Box sx={{ position: 'relative', height: 10, bgcolor: '#f5f5f5', borderRadius: '10px', overflow: 'hidden' }}>
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: `${percentage}%`,
+                                height: '100%',
+                                background: colors[index].bg,
+                                borderRadius: '10px',
+                                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.3)',
+                                transition: 'width 1s ease-out',
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      );
+                    })
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+
+            {isAdmin && (
+              <Grid item xs={12} md={7}>
+                <Paper sx={{
+                  p: 4,
+                  borderRadius: '24px',
+                  background: 'white',
+                  border: 'none',
+                  boxShadow: '0 10px 40px rgba(46, 125, 50, 0.12)',
+                  mb: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #26a69a 0%, #00897b 100%)',
+                  },
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ fontWeight: 800, color: '#1b5e20', mb: 0.5 }}>
+                        📈 Activity Overview
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#757575' }}>
+                        Monthly collection statistics
+                      </Typography>
+                    </Box>
+                    <Select value="month" size="small" sx={{
+                      minWidth: 130,
+                      borderRadius: '12px',
+                      bgcolor: '#f1f8f4',
+                      fontWeight: 600,
+                      border: 'none',
+                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                      '&:hover': { bgcolor: '#e8f5e9' },
+                    }}>
+                      <MenuItem value="month">Monthly</MenuItem>
+                      <MenuItem value="week">Weekly</MenuItem>
+                      <MenuItem value="year">Yearly</MenuItem>
+                    </Select>
+                  </Box>
+                  <BarChart
+                    xAxis={[{ scaleType: 'band', data: monthlyData.map(d => d.month), categoryGapRatio: 0.4 }]}
+                    series={[{ data: monthlyData.map(d => d.value), color: '#43a047' }]}
+                    height={320}
+                    sx={{
+                      '& .MuiChartsAxis-line': { stroke: '#e0e0e0', strokeWidth: 2 },
+                      '& .MuiChartsAxis-tick': { stroke: '#e0e0e0' },
+                      '& .MuiChartsAxis-tickLabel': { fontWeight: 600, fill: '#757575' },
+                    }}
+                  />
+                </Paper>
+
+                <Paper sx={{
+                  p: 4,
+                  borderRadius: '24px',
+                  background: 'white',
+                  border: 'none',
+                  boxShadow: '0 10px 40px rgba(46, 125, 50, 0.12)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #7cb342 0%, #689f38 100%)',
+                  },
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ fontWeight: 800, color: '#1b5e20', mb: 0.5 }}>
+                        📅 Collection Calendar
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#757575' }}>{monthName}</Typography>
+                    </Box>
+                    <Select
+                      value={selectedBarangay || ''}
+                      onChange={(e) => setSelectedBarangay(e.target.value)}
+                      size="small"
+                      sx={{
+                        minWidth: 160,
+                        borderRadius: '12px',
+                        bgcolor: '#f1f8f4',
+                        fontWeight: 600,
+                        border: 'none',
+                        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                        '&:hover': { bgcolor: '#e8f5e9' },
+                      }}
+                    >
+                      {barangays.map((b) => (
+                        <MenuItem key={b.barangay_id || b.barangayId} value={b.barangay_id || b.barangayId}>
+                          📍 {b.barangay_name || b.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1.5, mb: 2 }}>
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <Box key={day} sx={{
+                        textAlign: 'center',
+                        py: 1.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 800,
+                        color: '#43a047',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}>
+                        {day}
+                      </Box>
+                    ))}
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1.5 }}>
+                    {Array.from({ length: 42 }, (_, i) => {
+                      const dayNum = i - firstDay;
+                      const isValid = dayNum >= 0 && dayNum < daysInMonth;
+                      const isToday = isValid && dayNum === today.getDate() - 1;
+                      const isBooked = isValid && isDateBooked(dayNum);
+                      const displayDay = dayNum + 1;
+
+                      return (
+                        <Box
+                          key={`calendar-day-${i}`}
+                          sx={{
+                            aspectRatio: '1',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '16px',
+                            cursor: isBooked ? 'pointer' : 'default',
+                            // FIXED: Solid background for today instead of gradient
+                            bgcolor: isToday ? '#43a047' : isBooked ? '#e8f5e9' : 'transparent',
+                            border: isBooked && !isToday ? '2px solid #81c784' : 'none',
+                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            position: 'relative',
+                            boxShadow: isToday ? '0 4px 12px rgba(67, 160, 71, 0.4)' : 'none',
+                            '&:hover': {
+                              bgcolor: isBooked && !isToday ? '#c8e6c9' : isToday ? '#2e7d32' : '#f5f5f5',
+                              transform: isBooked || isToday ? 'scale(1.1)' : 'none',
+                              boxShadow: isBooked || isToday ? '0 4px 12px rgba(46, 125, 50, 0.3)' : 'none',
+                              zIndex: 10,
+                            },
+                          }}
+                          onClick={() => isBooked && navigate('/collection-schedule')}
+                        >
+                          {isValid && (
+                            <>
+                              <Typography sx={{ 
+                                fontSize: '0.9rem', 
+                                color: isToday ? 'white' : '#212121', 
+                                fontWeight: isToday ? 900 : 600,
+                                textShadow: isToday ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
+                              }}>
+                                {displayDay}
+                              </Typography>
+                              {isBooked && !isToday && (
+                                <Box sx={{
+                                  position: 'absolute',
+                                  bottom: 4,
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '50%',
+                                  bgcolor: '#43a047',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                }} />
+                              )}
+                            </>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+
+                  <Box sx={{ mt: 3, pt: 3, borderTop: '2px dashed #e0e0e0', display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)' }} />
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#757575' }}>Today</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: '#43a047' }} />
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: '#757575' }}>Scheduled</Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
+          </Grid>
+        </Box>
+      </Box>
     </AdminLayout>
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;
