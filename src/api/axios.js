@@ -72,19 +72,18 @@ api.interceptors.request.use(
     if (token) {
       const url = config.url || '';
       const isAuthEndpoint = url.includes('/users/login') || url.includes('/users/register') || url.includes('/users/refresh');
-      // Check if token is expired
       const decoded = decodeJwt(token);
       if (decoded && isTokenExpired(decoded)) {
         console.warn('⚠️ Token expired, clearing auth');
         clearAuthTokens();
-        // Allow this request to proceed without token, it will likely fail with 401
       } else {
-        // Token is valid. Do not attach auth header to auth endpoints
+        // Always attach token for non-auth endpoints (redundant logic as in user's version)
+        console.log('🔑 Adding auth token to request');
+        config.headers.Authorization = `Bearer ${token}`;
         if (!isAuthEndpoint) {
           console.log('🔑 Adding auth token to request');
           config.headers.Authorization = `Bearer ${token}`;
         } else {
-          // Ensure no stale header leaks to login
           if (config.headers && config.headers.Authorization) {
             delete config.headers.Authorization;
           }

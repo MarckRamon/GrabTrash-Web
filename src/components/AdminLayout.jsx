@@ -64,7 +64,7 @@ const AdminLayout = ({ children }) => {
   });
 
   useEffect(() => {
-    const fetchUserProfile = () => {
+    const fetchUserProfile = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -77,38 +77,39 @@ const AdminLayout = ({ children }) => {
           firstName: userData.firstName || '',
           lastName: userData.lastName || '',
           email: userData.email || '',
-          profileImageUrl: userData.profileImageUrl || userData.profileImage || '',
+          profileImageUrl: userData.profileImage || userData.profileImageUrl || '',
         });
 
-        // Attempt to fetch latest profile (including profile image) from backend
+        // Fetch latest profile (with auth header)
         if (userData.userId) {
-          api.get(`/users/profile/${userData.userId}`)
-            .then((res) => {
-              const profile = res?.data || {};
-              const image = profile.profileImage || profile.profileImageUrl || profile.photoUrl || '';
-              if (image) {
-                setUserProfile((prev) => ({
-                  ...prev,
-                  firstName: profile.firstName || prev.firstName,
-                  lastName: profile.lastName || prev.lastName,
-                  email: profile.email || prev.email,
-                  profileImageUrl: image,
-                }));
-                // Persist to localStorage so it survives reloads
-                const updatedUser = {
-                  ...userData,
-                  firstName: profile.firstName || userData.firstName,
-                  lastName: profile.lastName || userData.lastName,
-                  email: profile.email || userData.email,
-                  profileImage: image,
-                  profileImageUrl: image,
-                };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-              }
-            })
-            .catch(() => {
-              // Ignore; we'll rely on localStorage
+          try {
+            const res = await api.get(`/users/profile/${userData.userId}`, {
+              headers: { Authorization: `Bearer ${token}` },
             });
+            const profile = res?.data || {};
+            const image = profile.profileImage || profile.profileImageUrl || profile.photoUrl || '';
+            if (image) {
+              setUserProfile((prev) => ({
+                ...prev,
+                firstName: profile.firstName || prev.firstName,
+                lastName: profile.lastName || prev.lastName,
+                email: profile.email || prev.email,
+                profileImageUrl: image,
+              }));
+              // Persist updated user image info
+              const updatedUser = {
+                ...userData,
+                firstName: profile.firstName || userData.firstName,
+                lastName: profile.lastName || userData.lastName,
+                email: profile.email || userData.email,
+                profileImage: image,
+                profileImageUrl: image,
+              };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+          } catch (apiErr) {
+            // Ignore API error; fallback to local data only
+          }
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);

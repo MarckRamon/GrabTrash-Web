@@ -20,6 +20,9 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import SaveIcon from '@mui/icons-material/Save';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { getAuth } from 'firebase/auth';
+import './firebase.js'; // or adjust import as necessary
+import api from "./api/axios";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -34,8 +37,8 @@ const EditProfile = () => {
     message: '',
     severity: 'success',
   });
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState('');
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState('');
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   const FILELU_API_KEY = '42392ix8ebpn54bgalgek';
@@ -131,14 +134,10 @@ const EditProfile = () => {
 
   const handleImageSelect = (e) => {
     const file = e.target.files && e.target.files[0];
-    if (!file) {
-      setSelectedImageFile(null);
-      setImagePreviewUrl('');
-      return;
+    if (file) {
+      setSelectedImage(file);
+      setPreviewImage(URL.createObjectURL(file));
     }
-    setSelectedImageFile(file);
-    const preview = URL.createObjectURL(file);
-    setImagePreviewUrl(preview);
   };
 
   const handleUploadPhoto = async () => {
@@ -149,59 +148,104 @@ const EditProfile = () => {
         return;
       }
 
-      if (!selectedImageFile) {
+      if (!selectedImage) {
         setSnackbar({ open: true, message: 'Please select an image first', severity: 'warning' });
         return;
       }
 
-      const { previewUrl, canonicalUrl } = await uploadToFileLu(selectedImageFile);
+      const { previewUrl, canonicalUrl } = await uploadToFileLu(selectedImage);
       setUploadedImageUrl(previewUrl);
       setCurrentPhotoUrl(previewUrl);
-      
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      const updatedUserData = { 
-        ...userData, 
-        profileImageUrl: previewUrl, 
-        profileImage: previewUrl, 
-        profileImagePage: canonicalUrl 
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUserData));
-      
-      const event = new CustomEvent('profileUpdated', {
-        detail: {
-          firstName: updatedUserData.firstName,
-          lastName: updatedUserData.lastName,
-          email: updatedUserData.email,
-          photoUrl: previewUrl,
-          profileImageUrl: previewUrl,
-        },
-      });
-      window.dispatchEvent(event);
-      
-      setSelectedImageFile(null);
-      setImagePreviewUrl('');
 
-      setSnackbar({ open: true, message: 'Photo uploaded. Click Save Changes to apply.', severity: 'success' });
+      // Step 1: Get user id for Firestore
+      const auth = getAuth();
+      let userId = auth.currentUser ? auth.currentUser.uid : undefined;
+      if (!userId) {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userId = userData.userId;
+      }
+      if (!userId) throw new Error('User ID not found');
+      // Step 2: Save image to Firestore
+      // const db = getFirestore();
+      // await updateDoc(doc(db, 'users', userId), {
+      //   profileImage: previewUrl
+      // });
+      
+      // Optionally update localStorage and fire event for instant UI
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...userData, profileImage: previewUrl }));
+      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { profileImageUrl: previewUrl, photoUrl: previewUrl } }));
+      
+      setSelectedImage(null);
+      setPreviewImage('');
+      setSnackbar({ open: true, message: 'Photo uploaded and profile pic updated!', severity: 'success' });
     } catch (error) {
-      console.error('Error uploading profile photo:', error);
-      setSnackbar({ 
-        open: true, 
-        message: error.message || 'Error uploading photo', 
-        severity: 'error' 
-      });
+      setSnackbar({ open: true, message: error.message || 'Error uploading or saving photo', severity: 'error' });
     }
   };
 
   const handleSave = async () => {
-    setSnackbar({
-      open: true,
-      message: 'Profile updated successfully',
-      severity: 'success',
-    });
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = userData.userId;
+      if (!userId) throw new Error('User ID not found');
 
-    setTimeout(() => {
-      navigate(-1);
-    }, 1500);
+      // 1. Update profile fields (no photo)
+      await api.put(`/users/profile/${userId}`, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email
+      });
+
+      // 2. Update profile image separately if a new one was uploaded
+      if (uploadedImageUrl) {
+        const suffix = uploadedImageUrl.toLowerCase();
+        const imageType = suffix.endsWith('.png') ? 'png' : 'jpeg';
+        await api.put('/users/profile/image', {
+          imageUrl: uploadedImageUrl,
+          imageType
+        });
+      }
+
+      // 3. Fetch refreshed profile and persist to localStorage/UI
+      const refreshed = await api.get(`/users/profile/${userId}`);
+      const latest = refreshed.data || {};
+      const serverImage = latest.profileImage || latest.profileImageUrl || uploadedImageUrl || currentPhotoUrl;
+      const updatedUserData = {
+        ...userData,
+        firstName: latest.firstName ?? formData.firstName,
+        lastName: latest.lastName ?? formData.lastName,
+        email: latest.email ?? formData.email ?? userData.email,
+        profileImage: serverImage,
+        profileImageUrl: serverImage
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUserData));
+      window.dispatchEvent(new CustomEvent('profileUpdated', {
+        detail: {
+          firstName: updatedUserData.firstName,
+          lastName: updatedUserData.lastName,
+          email: updatedUserData.email,
+          photoUrl: serverImage,
+          profileImageUrl: serverImage,
+        }
+      }));
+
+      setSnackbar({ open: true, message: 'Profile updated successfully', severity: 'success' });
+      setTimeout(() => navigate(-1), 1000);
+    } catch (error) {
+      setSnackbar({ open: true, message: error.response?.data?.message || 'Error updating profile', severity: 'error' });
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        navigate('/');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -289,30 +333,16 @@ const EditProfile = () => {
           {/* Header */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 5, mt: 2 }}>
             <Box sx={{ position: 'relative', mb: 2 }}>
-              {imagePreviewUrl || currentPhotoUrl ? (
-                <Avatar
-                  src={imagePreviewUrl || currentPhotoUrl}
-                  alt="Profile"
-                  sx={{ 
-                    width: 120, 
-                    height: 120,
-                    border: '4px solid white',
-                    boxShadow: '0 8px 24px rgba(46, 125, 50, 0.3)',
-                  }}
-                />
-              ) : (
-                <Avatar
-                  sx={{ 
-                    width: 120, 
-                    height: 120,
-                    bgcolor: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
-                    border: '4px solid white',
-                    boxShadow: '0 8px 24px rgba(46, 125, 50, 0.3)',
-                  }}
-                >
-                  <AccountCircleIcon sx={{ fontSize: 80 }} />
-                </Avatar>
-              )}
+              <Avatar
+                src={previewImage || currentPhotoUrl}
+                alt="Profile"
+                sx={{ 
+                  width: 120, 
+                  height: 120,
+                  border: '4px solid white',
+                  boxShadow: '0 8px 24px rgba(46, 125, 50, 0.3)',
+                }}
+              />
               <IconButton
                 component="label"
                 sx={{
@@ -360,7 +390,7 @@ const EditProfile = () => {
           </Box>
 
           {/* Photo Upload Section */}
-          {selectedImageFile && (
+          {selectedImage && (
             <Fade in>
               <Paper
                 sx={{
@@ -376,7 +406,7 @@ const EditProfile = () => {
                     <PhotoCameraIcon sx={{ color: '#2e7d32', fontSize: 28 }} />
                     <Box>
                       <Typography sx={{ fontWeight: 600, color: '#2e7d32', fontSize: '0.9rem' }}>
-                        {selectedImageFile.name}
+                        {selectedImage.name}
                       </Typography>
                       <Typography sx={{ fontSize: '0.75rem', color: '#666' }}>
                         Ready to upload

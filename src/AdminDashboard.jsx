@@ -21,21 +21,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-
-const monthlyData = [
-  { month: 'JAN', value: 100 },
-  { month: 'FEB', value: 150 },
-  { month: 'MAR', value: 140 },
-  { month: 'APR', value: 250 },
-  { month: 'MAY', value: 280 },
-  { month: 'JUN', value: 200 },
-  { month: 'JUL', value: 220 },
-  { month: 'AUG', value: 100 },
-  { month: 'SEP', value: 180 },
-  { month: 'OCT', value: 260 },
-  { month: 'NOV', value: 340 },
-  { month: 'DEC', value: 400 },
-];
+import schedulesService from './services/schedulesService';
 
 const AdminDashboard = () => {
   const role = (JSON.parse(localStorage.getItem('user') || '{}').role || '').toLowerCase();
@@ -49,6 +35,21 @@ const AdminDashboard = () => {
   const [barangaySchedules, setBarangaySchedules] = useState([]);
   const [topBarangays, setTopBarangays] = useState([]);
   const navigate = useNavigate();
+  const [monthlyData, setMonthlyData] = useState([
+    { month: 'JAN', value: 0 },
+    { month: 'FEB', value: 0 },
+    { month: 'MAR', value: 0 },
+    { month: 'APR', value: 0 },
+    { month: 'MAY', value: 0 },
+    { month: 'JUN', value: 0 },
+    { month: 'JUL', value: 0 },
+    { month: 'AUG', value: 0 },
+    { month: 'SEP', value: 0 },
+    { month: 'OCT', value: 0 },
+    { month: 'NOV', value: 0 },
+    { month: 'DEC', value: 0 },
+  ]);
+  const [topBarangaysDynamic, setTopBarangaysDynamic] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -127,6 +128,75 @@ const AdminDashboard = () => {
       }
     };
     fetchTopBarangays();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const fetchAndProcessMonthlyData = async () => {
+      try {
+        const schedules = await schedulesService.getAllSchedules();
+        // Prepare a map for month aggregation
+        const monthlyCounts = Array(12).fill(0);
+        const nowYear = new Date().getFullYear();
+        schedules.forEach(sch => {
+          // Only count active schedules
+          const isActive = sch.isActive !== undefined ? sch.isActive : (sch.active !== undefined ? sch.active : true);
+          if (!isActive) return;
+          if (sch.collectionDateTime) {
+            // Parse date for each schedule
+            const date = new Date(sch.collectionDateTime);
+            if (!isNaN(date) && date.getFullYear() === nowYear) {
+              const m = date.getMonth();
+              monthlyCounts[m]++;
+            }
+          }
+        });
+        const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const newData = monthNames.map((m, idx) => ({month: m, value: monthlyCounts[idx]}));
+        setMonthlyData(newData);
+      } catch (err) {
+        setMonthlyData([
+          { month: 'JAN', value: 0 },
+          { month: 'FEB', value: 0 },
+          { month: 'MAR', value: 0 },
+          { month: 'APR', value: 0 },
+          { month: 'MAY', value: 0 },
+          { month: 'JUN', value: 0 },
+          { month: 'JUL', value: 0 },
+          { month: 'AUG', value: 0 },
+          { month: 'SEP', value: 0 },
+          { month: 'OCT', value: 0 },
+          { month: 'NOV', value: 0 },
+          { month: 'DEC', value: 0 },
+        ]);
+        console.error('Error loading schedules for chart:', err);
+      }
+    };
+    fetchAndProcessMonthlyData();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    const fetchAndProcessTopBarangays = async () => {
+      try {
+        const schedules = await schedulesService.getAllSchedules();
+        const barangayCounts = {};
+        schedules.forEach(sch => {
+          const isActive = sch.isActive !== undefined ? sch.isActive : (sch.active !== undefined ? sch.active : true);
+          if (!isActive) return;
+          // Use barangayName (fallback: 'Unknown')
+          const name = sch.barangayName || sch.barangay_name || sch.name || 'Unknown';
+          barangayCounts[name] = (barangayCounts[name] || 0) + 1;
+        });
+        // Convert to array and sort by count descending
+        const sorted = Object.entries(barangayCounts)
+          .map(([name, count]) => ({ barangayName: name, count }))
+          .sort((a, b) => b.count - a.count);
+        setTopBarangaysDynamic(sorted);
+      } catch (error) {
+        setTopBarangaysDynamic([]);
+        console.error('Error fetching top barangays for Top Locations:', error);
+      }
+    };
+    fetchAndProcessTopBarangays();
   }, [isAdmin]);
 
   const today = new Date();
@@ -400,28 +470,14 @@ const AdminDashboard = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {topBarangays.length === 0 ? (
+                  {topBarangaysDynamic.length === 0 ? (
                     <Typography sx={{ color: '#757575', textAlign: 'center', py: 4 }}>
                       No data available
                     </Typography>
                   ) : (
-                    topBarangays.slice(0, 3).map((barangay, index) => {
-                      const barangayId = barangay.barangayId;
-                      const barangayData = barangays.find(b => 
-                        (b.barangay_id === barangayId) || 
-                        (b.barangayId === barangayId) ||
-                        (b.id === barangayId)
-                      );
-                      
-                      const barangayName = barangayData?.name || 
-                                          barangayData?.barangay_name || 
-                                          barangayData?.barangayName ||
-                                          barangayId || 
-                                          'Unknown';
-                      
-                      console.log(`✅ Barangay ${index}: ID="${barangayId}", Name="${barangayName}"`);
-                      
-                      const percentage = (barangay.count / (topBarangays[0]?.count || 1)) * 100;
+                    topBarangaysDynamic.slice(0, 3).map((barangay, index) => {
+                      const barangayName = barangay.barangayName || 'Unknown';
+                      const percentage = (barangay.count / (topBarangaysDynamic[0]?.count || 1)) * 100;
                       const colors = [
                         { bg: 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)', badge: '#1b5e20' },
                         { bg: 'linear-gradient(135deg, #81c784 0%, #66bb6a 100%)', badge: '#2e7d32' },
@@ -446,7 +502,7 @@ const AdminDashboard = () => {
                                   {barangayName}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#757575' }}>
-                                  {percentage.toFixed(0)}% of total orders
+                                  {percentage.toFixed(0)}% of total schedules
                                 </Typography>
                               </Box>
                             </Box>

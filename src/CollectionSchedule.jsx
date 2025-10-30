@@ -260,6 +260,7 @@ const CollectionSchedule = () => {
 
   // Format time (e.g., "9:00 AM")
   const formatTime = (hour) => {
+    if (hour === 0) return '12 AM';
     if (hour === 12) return '12 PM';
     if (hour > 12) return `${hour - 12} PM`;
     return `${hour} AM`;
@@ -474,8 +475,8 @@ const CollectionSchedule = () => {
     setWeekDays(days);
   }, [currentDate]);
 
-  // Generate hours for the day (from 7 AM to 5 PM as shown in the image)
-  const hours = Array.from({ length: 11 }, (_, i) => i + 7); // 7 AM to 5 PM
+  // Change hours for full day
+  const hours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23 (12am to 11pm)
 
   // Check access
   useEffect(() => {
