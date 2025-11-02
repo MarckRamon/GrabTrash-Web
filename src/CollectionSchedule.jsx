@@ -21,20 +21,22 @@ import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import AdminLayout from './components/AdminLayout';
 import schedulesService from './services/schedulesService';
 import ScheduleDialog from './components/ScheduleDialog';
-import './CollectionSchedule.css'; // We'll create this CSS file too
+import './CollectionSchedule.css';
 import { useNavigate } from 'react-router-dom';
 
 const CollectionSchedule = () => {
   const navigate = useNavigate();
-  // State for calendar and schedules
-  const [viewMode, setViewMode] = useState('week'); // day, week, month, year
+  const [viewMode, setViewMode] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [weekDays, setWeekDays] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [allSchedules, setAllSchedules] = useState([]); // Store all schedules before filtering
+  const [allSchedules, setAllSchedules] = useState([]);
   const [barangays, setBarangays] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,19 +46,12 @@ const CollectionSchedule = () => {
     severity: 'info'
   });
   
-  // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
-
-  // Filter states
-  // Remove searchTerm state
-  // const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBarangay, setSelectedBarangay] = useState('all'); // NEW: barangay filter
-
+  const [selectedBarangay, setSelectedBarangay] = useState('all');
   const [allowed, setAllowed] = useState(null);
 
-  // Format date for display
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
   };
@@ -65,7 +60,6 @@ const CollectionSchedule = () => {
     return date.getDate();
   };
 
-  // Navigate to previous or next time period
   const navigateTo = (direction) => {
     const newDate = new Date(currentDate);
     
@@ -82,21 +76,16 @@ const CollectionSchedule = () => {
     setCurrentDate(newDate);
   };
 
-  // Set today as the current date
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
-  // Generate the days for the week view
   const generateWeekDays = (date) => {
     const days = [];
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
-    // Calculate the first day of the week (Sunday)
+    const dayOfWeek = date.getDay();
     const firstDay = new Date(date);
     firstDay.setDate(date.getDate() - dayOfWeek);
     
-    // Generate 7 days starting from Sunday
     for (let i = 0; i < 7; i++) {
       const day = new Date(firstDay);
       day.setDate(firstDay.getDate() + i);
@@ -106,7 +95,6 @@ const CollectionSchedule = () => {
     return days;
   };
 
-  // Show notification
   const showNotification = (message, severity = 'info') => {
     setNotification({
       open: true,
@@ -115,33 +103,28 @@ const CollectionSchedule = () => {
     });
   };
 
-  // Close notification
   const handleCloseNotification = () => {
     setNotification(prev => ({ ...prev, open: false }));
   };
 
-  // Handle barangay filter change
   const handleBarangayChange = (event) => {
     const value = event.target.value;
     setSelectedBarangay(value);
-    applyFilters(allSchedules, value); // pass barangay
+    applyFilters(allSchedules, value);
   };
 
-  // Apply filters to schedules (now only based on search term, barangay, and showing only active schedules)
   const applyFilters = (scheduleList, barangay) => {
     if (!scheduleList || !Array.isArray(scheduleList)) return;
     
     console.log(`Applying barangay filter: ${barangay}`);
     console.log(`Input schedules: ${scheduleList.length}`);
     
-    // Start with only active schedules (default behavior)
     let filtered = scheduleList.filter(schedule => 
       schedule.isActive === true || 
       schedule.isActive === "true" ||
       schedule.active === true ||
       schedule.active === "true");
     
-    // Always filter by barangay
     if (barangay) {
       filtered = filtered.filter(schedule =>
         schedule.barangayId === barangay || schedule.barangayName === barangay
@@ -149,35 +132,21 @@ const CollectionSchedule = () => {
     }
     
     console.log(`Active schedules count: ${filtered.length}`);
-    
-    // Apply search term filter if exists
-    // if (search && search.trim() !== '') {
-    //   const searchLower = search.toLowerCase().trim();
-    //   filtered = filtered.filter(schedule => 
-    //     (schedule.barangayName && schedule.barangayName.toLowerCase().includes(searchLower)) ||
-    //     (schedule.notes && schedule.notes.toLowerCase().includes(searchLower)) ||
-    //     (schedule.wasteType && schedule.wasteType.toLowerCase().includes(searchLower))
-    //   );
-    // }
-    
     console.log(`Filtered schedules: ${filtered.length}`);
     setSchedules(filtered);
   };
 
-  // Fetch schedules from backend API
   const fetchSchedules = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log('🔄 Fetching schedules from API');
+      console.log('📄 Fetching schedules from API');
       
-      // First try to fetch barangays
       try {
         const barangayData = await schedulesService.getAllBarangays();
         console.log(`📊 Retrieved ${barangayData.length} barangays for the dropdown:`, 
           barangayData.slice(0, 3).map(b => b.name || b.barangayName));
         setBarangays(barangayData);
-        // If selectedBarangay is no longer valid or is 'all', set to first barangay
         if (
           !barangayData.some(b => b.barangayId === selectedBarangay || b.name === selectedBarangay)
         ) {
@@ -192,11 +161,9 @@ const CollectionSchedule = () => {
         setBarangays([]);
       }
       
-      // Then try to fetch schedules
       try {
         const scheduleData = await schedulesService.getAllSchedules();
         
-        // Log what we received for debugging
         console.log(`📋 Retrieved ${scheduleData.length} schedules from API`);
         
         if (scheduleData.length > 0) {
@@ -208,10 +175,7 @@ const CollectionSchedule = () => {
           });
         }
         
-        // Store all schedules for filtering
         setAllSchedules(scheduleData);
-        
-        // Apply current filters - now only showing active schedules by default
         applyFilters(scheduleData, selectedBarangay);
         
         if (scheduleData.length === 0) {
@@ -220,7 +184,6 @@ const CollectionSchedule = () => {
       } catch (error) {
         console.error('Error fetching collection schedules:', error);
         
-        // Check if this might be a permissions error or API endpoint issue
         if (error.code === 'permission-denied' || 
             error.message?.includes('permission') || 
             error.response?.status === 403) {
@@ -231,7 +194,6 @@ const CollectionSchedule = () => {
             'error'
           );
         } else if (error.response?.status === 404) {
-          // API endpoint might not exist
           setError('Schedule API endpoint not found. Please check with your administrator if schedule management is enabled.');
           showNotification(
             'Schedule API endpoint not available. Please ensure your Spring backend is running and supports the collection-schedules endpoints.',
@@ -258,7 +220,6 @@ const CollectionSchedule = () => {
     }
   };
 
-  // Format time (e.g., "9:00 AM")
   const formatTime = (hour) => {
     if (hour === 0) return '12 AM';
     if (hour === 12) return '12 PM';
@@ -266,7 +227,6 @@ const CollectionSchedule = () => {
     return `${hour} AM`;
   };
 
-  // Format time string (e.g. "08:00:00" to "8:00 AM")
   const formatTimeString = (timeString) => {
     if (!timeString) return '';
     
@@ -282,7 +242,6 @@ const CollectionSchedule = () => {
     }
   };
 
-  // Convert day string to day index
   const getDayIndex = (dayString) => {
     if (!dayString) return -1;
     
@@ -290,24 +249,20 @@ const CollectionSchedule = () => {
     return days.indexOf(dayString.toUpperCase());
   };
 
-  // Parse a date from the format "DD Month YYYY at HH:MM:SS UTC+8"
   const parseFirestoreDate = (dateString) => {
     if (!dateString) return null;
     
     try {
       console.log(`Parsing date: ${dateString}`);
       
-      // Example: "21 May 2025 at 15:00:00 UTC+8"
       const parts = dateString.split(' at ');
       if (parts.length !== 2) {
         console.error('Invalid date format:', dateString);
         return null;
       }
       
-      const datePart = parts[0]; // "21 May 2025"
-      const timePart = parts[1].split(' ')[0]; // "15:00:00"
-      
-      // Construct a date string that JavaScript can parse
+      const datePart = parts[0];
+      const timePart = parts[1].split(' ')[0];
       const dateStr = `${datePart} ${timePart}`;
       console.log(`Parsed to: ${dateStr}`);
       
@@ -325,35 +280,27 @@ const CollectionSchedule = () => {
     }
   };
   
-  // Check if a schedule should be displayed at a specific day and hour
   const getScheduleForTimeSlot = (day, hour) => {
     if (!schedules || schedules.length === 0) return null;
     
     const matchingSchedules = [];
-    
-    // For debugging
     const dayStr = day.toLocaleDateString();
     const timeStr = `${hour}:00`;
     
-    // Check each schedule
     schedules.forEach(schedule => {
       if (!schedule) return;
       
       console.log(`🔍 Processing schedule: ${schedule.scheduleId}, isRecurring: ${schedule.isRecurring}, recurringDay: ${schedule.recurringDay}, recurringTime: ${schedule.recurringTime}`);
       
       try {
-        // Handle one-time schedules
         if (schedule.isRecurring !== true && schedule.isRecurring !== "true") {
           if (schedule.collectionDateTime) {
             let scheduleDate = null;
             
-            // Handle different date formats
             if (typeof schedule.collectionDateTime === 'string') {
               if (schedule.collectionDateTime.includes(' at ')) {
-                // Format: "21 May 2025 at 15:00:00 UTC+8"
                 scheduleDate = parseFirestoreDate(schedule.collectionDateTime);
               } else {
-                // Standard ISO format
                 scheduleDate = new Date(schedule.collectionDateTime);
               }
             } else {
@@ -371,7 +318,6 @@ const CollectionSchedule = () => {
             }
           }
         }
-        // Handle recurring schedules
         else if (schedule.isRecurring === true || schedule.isRecurring === "true") {
           if (schedule.recurringDay) {
             const scheduleDayIndex = getDayIndex(schedule.recurringDay);
@@ -380,13 +326,11 @@ const CollectionSchedule = () => {
             if (scheduleDayIndex === currentDayIndex) {
               if (schedule.recurringTime) {
                 try {
-                  // Parse HH:MM or HH:MM:SS format
                   let scheduleHour;
                   if (schedule.recurringTime.includes(':')) {
                     const timeParts = schedule.recurringTime.split(':');
                     scheduleHour = parseInt(timeParts[0], 10);
                   } else {
-                    // Handle case where time might be in different format
                     scheduleHour = parseInt(schedule.recurringTime, 10);
                   }
                   
@@ -413,7 +357,6 @@ const CollectionSchedule = () => {
     return matchingSchedules.length > 0 ? matchingSchedules : null;
   };
 
-  // Determine schedule type class (biodegradable or non-biodegradable)
   const getScheduleTypeClass = (schedule) => {
     return (schedule.wasteType && 
             schedule.wasteType === 'BIODEGRADABLE') 
@@ -421,21 +364,18 @@ const CollectionSchedule = () => {
             : 'non-biodegradable';
   };
   
-  // Handle opening the add schedule dialog
   const handleAddSchedule = () => {
     setIsEditMode(false);
     setSelectedSchedule(null);
     setDialogOpen(true);
   };
   
-  // Handle opening the edit schedule dialog
   const handleEditSchedule = (schedule) => {
     setIsEditMode(true);
     setSelectedSchedule(schedule);
     setDialogOpen(true);
   };
   
-  // Handle dialog close
   const handleDialogClose = (result) => {
     setDialogOpen(false);
     
@@ -454,31 +394,21 @@ const CollectionSchedule = () => {
     }
   };
   
-  // Load schedules and barangays when the component mounts
   useEffect(() => {
-    console.log('🔄 Component mounted, initializing data...');
-    
-    // Set up the week days
+    console.log('📄 Component mounted, initializing data...');
     const days = generateWeekDays(currentDate);
     setWeekDays(days);
-    
-    // Fetch schedules and barangays from Firestore
     fetchSchedules();
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Update week days when the current date changes
   useEffect(() => {
     console.log('📅 Current date changed, updating week days...');
     const days = generateWeekDays(currentDate);
     setWeekDays(days);
   }, [currentDate]);
 
-  // Change hours for full day
-  const hours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23 (12am to 11pm)
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  // Check access
   useEffect(() => {
     const role = (JSON.parse(localStorage.getItem('user') || '{}').role || '').toLowerCase();
     if (role !== 'admin') {
@@ -488,15 +418,12 @@ const CollectionSchedule = () => {
     }
   }, [navigate]);
 
-  // In useEffect, when barangays or schedules change, re-apply filters
   useEffect(() => {
     applyFilters(allSchedules, selectedBarangay);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSchedules, selectedBarangay]);
 
   if (allowed === null) return null;
 
-  // Loading state
   if (isLoading && allSchedules.length === 0) {
     return (
       <AdminLayout>
@@ -504,29 +431,50 @@ const CollectionSchedule = () => {
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center', 
-          height: 'calc(100vh - 100px)'
+          height: 'calc(100vh - 100px)',
+          flexDirection: 'column',
+          gap: 2
         }}>
-          <CircularProgress />
+          <CircularProgress size={60} sx={{ color: '#4CAF50' }} />
+          <Typography variant="h6" sx={{ color: '#2e7d32', fontWeight: 500 }}>
+            Loading schedules...
+          </Typography>
         </Box>
       </AdminLayout>
     );
   }
 
-  // Empty state with error
   if (error && allSchedules.length === 0) {
     return (
       <AdminLayout>
         <Box sx={{ p: 3, width: '100%' }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-            Collection Schedule
-          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            mb: 4,
+            pb: 2,
+            borderBottom: '3px solid',
+            borderImage: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%) 1'
+          }}>
+            <CalendarTodayIcon sx={{ fontSize: 32, color: '#4CAF50', mr: 2 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+              Collection Schedule
+            </Typography>
+          </Box>
           
-          <Paper sx={{ p: 4, textAlign: 'center', mt: 2 }}>
-            <Alert severity="error" sx={{ mb: 3, mx: 'auto', maxWidth: 500 }}>
+          <Paper sx={{ 
+            p: 4, 
+            textAlign: 'center', 
+            mt: 2,
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(76, 175, 80, 0.15)',
+            border: '1px solid rgba(76, 175, 80, 0.1)'
+          }}>
+            <Alert severity="error" sx={{ mb: 3, mx: 'auto', maxWidth: 500, borderRadius: 2 }}>
               {error}
             </Alert>
             
-            <Typography variant="body1" sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, color: '#555' }}>
               {barangays.length > 0 ? 
                 'No schedules found. You can add a new schedule using the button below.' : 
                 'Unable to load barangays. Please check your connection and try again.'}
@@ -535,10 +483,22 @@ const CollectionSchedule = () => {
             {barangays.length > 0 && (
               <Button 
                 variant="contained" 
-                color="primary" 
                 startIcon={<AddIcon />}
                 onClick={handleAddSchedule}
                 disabled={barangays.length === 0}
+                sx={{
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                  color: 'white',
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #43A047 0%, #4CAF50 100%)',
+                    boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                  }
+                }}
               >
                 Add Schedule
               </Button>
@@ -549,29 +509,57 @@ const CollectionSchedule = () => {
     );
   }
 
-  // Empty state with no error (just no schedules yet)
   if (allSchedules.length === 0) {
     return (
       <AdminLayout>
         <Box sx={{ p: 3, width: '100%' }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-            Collection Schedule
-          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            mb: 4,
+            pb: 2,
+            borderBottom: '3px solid',
+            borderImage: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%) 1'
+          }}>
+            <CalendarTodayIcon sx={{ fontSize: 32, color: '#4CAF50', mr: 2 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+              Collection Schedule
+            </Typography>
+          </Box>
           
-          <Paper sx={{ p: 4, textAlign: 'center', mt: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+          <Paper sx={{ 
+            p: 4, 
+            textAlign: 'center', 
+            mt: 2,
+            borderRadius: 3,
+            boxShadow: '0 8px 32px rgba(76, 175, 80, 0.15)',
+            border: '1px solid rgba(76, 175, 80, 0.1)'
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, color: '#2e7d32', fontWeight: 600 }}>
               No Collection Schedules Found
             </Typography>
             
-            <Typography variant="body1" sx={{ mb: 3 }}>
+            <Typography variant="body1" sx={{ mb: 3, color: '#555' }}>
               There are no collection schedules set up yet. Click the button below to add your first schedule.
             </Typography>
             
             <Button 
               variant="contained" 
-              color="primary" 
               startIcon={<AddIcon />}
               onClick={handleAddSchedule}
+              sx={{
+                background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                color: 'white',
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #43A047 0%, #4CAF50 100%)',
+                  boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                }
+              }}
             >
               Add Schedule
             </Button>
@@ -581,116 +569,205 @@ const CollectionSchedule = () => {
     );
   }
 
-  // Main schedule view with data
   return (
     <AdminLayout>
       <Box sx={{ p: 3, width: '100%', position: 'relative' }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-          Collection Schedule
-        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          mb: 4,
+          pb: 2,
+          borderBottom: '3px solid',
+          borderImage: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%) 1'
+        }}>
+          <CalendarTodayIcon sx={{ fontSize: 32, color: '#4CAF50', mr: 2 }} />
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+            Collection Schedule
+          </Typography>
+        </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4,
+          flexWrap: 'wrap',
+          gap: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button 
               onClick={goToToday}
-              variant="outlined"
-              sx={{ mr: 1 }}
+              variant="contained"
+              startIcon={<CalendarTodayIcon />}
+              sx={{
+                background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                color: 'white',
+                borderRadius: 2,
+                fontWeight: 600,
+                px: 3,
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #43A047 0%, #4CAF50 100%)',
+                  boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                }
+              }}
             >
               Today
             </Button>
-            <Box sx={{ display: 'flex', alignItems: 'center', mx: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Button 
                 onClick={() => navigateTo('prev')}
                 variant="outlined"
-                sx={{ minWidth: 40, p: 0.5, borderRadius: '50%', mr: 1 }}
+                sx={{ 
+                  minWidth: 44, 
+                  height: 44,
+                  p: 0, 
+                  borderRadius: '50%',
+                  borderColor: '#4CAF50',
+                  color: '#4CAF50',
+                  '&:hover': {
+                    borderColor: '#43A047',
+                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                  }
+                }}
               >
-                &lt;
+                <NavigateBeforeIcon />
               </Button>
               <Button 
                 onClick={() => navigateTo('next')}
                 variant="outlined"
-                sx={{ minWidth: 40, p: 0.5, borderRadius: '50%' }}
+                sx={{ 
+                  minWidth: 44, 
+                  height: 44,
+                  p: 0, 
+                  borderRadius: '50%',
+                  borderColor: '#4CAF50',
+                  color: '#4CAF50',
+                  '&:hover': {
+                    borderColor: '#43A047',
+                    backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                  }
+                }}
               >
-                &gt;
+                <NavigateNextIcon />
               </Button>
             </Box>
           </Box>
 
-          <ButtonGroup variant="outlined" sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)', borderRadius: '8px' }}>
+          <ButtonGroup 
+            variant="outlined" 
+            sx={{ 
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.15)', 
+              borderRadius: 2,
+              '& .MuiButton-root': {
+                borderColor: '#4CAF50',
+                color: '#4CAF50',
+                fontWeight: 600,
+                '&:hover': {
+                  borderColor: '#43A047',
+                  backgroundColor: 'rgba(76, 175, 80, 0.08)',
+                }
+              },
+              '& .MuiButton-contained': {
+                background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                color: 'white',
+                borderColor: 'transparent',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #43A047 0%, #4CAF50 100%)',
+                }
+              }
+            }}
+          >
             <Button 
               onClick={() => setViewMode('day')}
               variant={viewMode === 'day' ? 'contained' : 'outlined'}
-              color="primary"
             >
               Day
             </Button>
             <Button 
               onClick={() => setViewMode('week')}
               variant={viewMode === 'week' ? 'contained' : 'outlined'}
-              color="primary"
             >
               Week
             </Button>
             <Button 
               onClick={() => setViewMode('month')}
               variant={viewMode === 'month' ? 'contained' : 'outlined'}
-              color="primary"
             >
               Month
             </Button>
             <Button 
               onClick={() => setViewMode('year')}
               variant={viewMode === 'year' ? 'contained' : 'outlined'}
-              color="primary"
             >
               Year
             </Button>
           </ButtonGroup>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {/* Barangay Filter Dropdown */}
-            <TextField
-              select
-              label="Barangay"
-              size="small"
-              value={selectedBarangay}
-              onChange={handleBarangayChange}
-              sx={{ width: 180, mr: 2, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-              SelectProps={{ native: true }}
-            >
-              {barangays.map((b) => (
-                <option key={b.barangayId || b.id} value={b.barangayId || b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </TextField>
-          </Box>
+          <TextField
+            select
+            label="Barangay"
+            size="medium"
+            value={selectedBarangay}
+            onChange={handleBarangayChange}
+            sx={{ 
+              width: 220,
+              '& .MuiOutlinedInput-root': { 
+                borderRadius: 2,
+                '&:hover fieldset': {
+                  borderColor: '#4CAF50',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#4CAF50',
+                }
+              },
+              '& .MuiInputLabel-root.Mui-focused': {
+                color: '#4CAF50',
+              }
+            }}
+            SelectProps={{ native: true }}
+          >
+            {barangays.map((b) => (
+              <option key={b.barangayId || b.id} value={b.barangayId || b.name}>
+                {b.name}
+              </option>
+            ))}
+          </TextField>
         </Box>
 
-        {/* Empty message when filtered results have no schedules */}
         {schedules.length === 0 && allSchedules.length > 0 && (
-          <Alert severity="info" sx={{ mb: 3, borderRadius: '8px' }}>
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: 2,
+              border: '1px solid rgba(33, 150, 243, 0.2)',
+              boxShadow: '0 2px 8px rgba(33, 150, 243, 0.1)'
+            }}
+          >
             No active schedules found{selectedBarangay !== 'all' ? ` in ${selectedBarangay}` : ''}.
           </Alert>
         )}
 
-        <Paper sx={{ overflow: 'auto', maxHeight: 'calc(100vh - 260px)', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+        <Paper sx={{ 
+          overflow: 'auto', 
+          maxHeight: 'calc(100vh - 300px)', 
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(76, 175, 80, 0.15)',
+          border: '1px solid rgba(76, 175, 80, 0.1)'
+        }}>
           <Box className="schedule-calendar">
-            {/* Month indicator */}
             <Box className="month-indicator">
               {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </Box>
             
-            {/* Header row with days */}
             <Box className="calendar-header">
-              {/* Empty corner cell */}
               <Box className="time-cell">
-                <Typography variant="subtitle2" sx={{ fontWeight: 500, color: '#666' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#2e7d32', textAlign: 'center' }}>
                   PHT<br />UTC+8
                 </Typography>
               </Box>
               
-              {/* Day columns */}
               {weekDays.map((day, index) => {
                 const isToday = new Date().toDateString() === day.toDateString();
                 return (
@@ -711,18 +788,15 @@ const CollectionSchedule = () => {
               })}
             </Box>
 
-            {/* Time grid */}
             <Box className="calendar-grid">
               {hours.map((hour) => (
                 <Box key={hour} className="time-row">
-                  {/* Time column */}
                   <Box className="time-cell">
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatTime(hour)}
                     </Typography>
                   </Box>
                   
-                  {/* Day columns */}
                   {weekDays.map((day, dayIndex) => {
                     const schedulesForSlot = getScheduleForTimeSlot(day, hour);
                     const isToday = new Date().toDateString() === day.toDateString();
@@ -733,12 +807,11 @@ const CollectionSchedule = () => {
                         className="schedule-cell"
                         sx={{ 
                           backgroundColor: isToday ? '#f8fafd' : 'white',
-                          borderBottom: '1px solid #eaeaea',
-                          borderRight: dayIndex < 6 ? '1px solid #eaeaea' : 'none',
+                          borderBottom: '1px solid rgba(76, 175, 80, 0.08)',
+                          borderRight: dayIndex < 6 ? '1px solid rgba(76, 175, 80, 0.08)' : 'none',
                         }}
                       >
                         {schedulesForSlot && schedulesForSlot.length > 0 && schedulesForSlot.map((schedule, idx) => {
-                          // Determine if the schedule is active
                           const isScheduleActive = 
                             (schedule.isActive !== undefined ? schedule.isActive : 
                             (schedule.active !== undefined ? schedule.active : true));
@@ -768,17 +841,21 @@ const CollectionSchedule = () => {
                                   fontSize: '10px', 
                                   color: '#f44336',
                                   fontWeight: 'bold',
-                                  mt: 0.5
+                                  mt: 0.5,
+                                  position: 'relative',
+                                  zIndex: 1
                                 }}>
                                   INACTIVE
                                 </Typography>
                               )}
                               {schedule.isRecurring && (
                                 <Typography sx={{ 
-                                  fontSize: '9px', 
+                                  fontSize: '10px', 
                                   color: '#666',
                                   fontWeight: 'bold',
-                                  mt: 0.5
+                                  mt: 0.5,
+                                  position: 'relative',
+                                  zIndex: 1
                                 }}>
                                   🔄 RECURRING
                                 </Typography>
@@ -800,84 +877,117 @@ const CollectionSchedule = () => {
           </Box>
         </Paper>
 
-        {/* Legend */}
-        <Box sx={{ mt: 3, p: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, borderRadius: '8px', bgcolor: '#f9f9f9' }}>
-          <Typography variant="h6" sx={{ mr: 3, fontWeight: 600 }}>
+        <Box sx={{ 
+          mt: 4, 
+          p: 3, 
+          display: 'flex', 
+          alignItems: 'center', 
+          flexWrap: 'wrap', 
+          gap: 3, 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f1f8f4 0%, #e8f5e9 100%)',
+          border: '2px solid rgba(76, 175, 80, 0.2)',
+          boxShadow: '0 4px 16px rgba(76, 175, 80, 0.1)'
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#2e7d32', mr: 2 }}>
             Legend
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              border: '1px solid #e0e0e0',
-              borderRadius: 2,
+              border: '2px solid rgba(244, 67, 54, 0.3)',
+              borderRadius: 2.5,
               overflow: 'hidden',
               bgcolor: 'white',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              boxShadow: '0 4px 12px rgba(244, 67, 54, 0.15)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(244, 67, 54, 0.25)',
+              }
             }}>
               <Box sx={{ 
                 bgcolor: '#ffebee', 
-                borderLeft: '4px solid #f44336',
-                width: 30, 
-                height: 30, 
+                borderLeft: '5px solid #f44336',
+                width: 40, 
+                height: 40, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                px: 1
               }}></Box>
-              <Typography sx={{ px: 2, py: 0.5, fontSize: 14, color: '#000000', fontWeight: 500 }}>
+              <Typography sx={{ 
+                px: 3, 
+                py: 1, 
+                fontSize: 15, 
+                color: '#c62828', 
+                fontWeight: 600 
+              }}>
                 Non-Biodegradable
               </Typography>
             </Box>
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              border: '1px solid #e0e0e0',
-              borderRadius: 2,
+              border: '2px solid rgba(76, 175, 80, 0.3)',
+              borderRadius: 2.5,
               overflow: 'hidden',
               bgcolor: 'white',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.15)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(76, 175, 80, 0.25)',
+              }
             }}>
               <Box sx={{ 
                 bgcolor: '#e8f5e9',
-                borderLeft: '4px solid #4caf50',
-                width: 30, 
-                height: 30, 
+                borderLeft: '5px solid #4caf50',
+                width: 40, 
+                height: 40, 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
-                px: 1
               }}></Box>
-              <Typography sx={{ px: 2, py: 0.5, fontSize: 14, color: '#000000', fontWeight: 500 }}>
+              <Typography sx={{ 
+                px: 3, 
+                py: 1, 
+                fontSize: 15, 
+                color: '#2e7d32', 
+                fontWeight: 600 
+              }}>
                 Biodegradable
               </Typography>
             </Box>
           </Box>
         </Box>
         
-        {/* Floating Action Button for adding schedule */}
-        <Tooltip title="Add Schedule">
+        <Tooltip title="Add Schedule" placement="left">
           <Fab 
             color="primary" 
             aria-label="add"
             onClick={handleAddSchedule}
             sx={{ 
               position: 'fixed', 
-              bottom: 20, 
-              right: 20,
-              bgcolor: '#4CAF50',
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              bottom: 32, 
+              right: 32,
+              width: 64,
+              height: 64,
+              background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+              boxShadow: '0 8px 24px rgba(76, 175, 80, 0.4)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                bgcolor: '#43A047'
+                background: 'linear-gradient(135deg, #43A047 0%, #4CAF50 100%)',
+                boxShadow: '0 12px 32px rgba(76, 175, 80, 0.5)',
+                transform: 'translateY(-4px) scale(1.05)',
               }
             }}
           >
-            <AddIcon />
+            <AddIcon sx={{ fontSize: 32 }} />
           </Fab>
         </Tooltip>
       </Box>
 
-      {/* Schedule Dialog */}
       <ScheduleDialog
         open={dialogOpen}
         onClose={handleDialogClose}
@@ -887,7 +997,6 @@ const CollectionSchedule = () => {
         existingSchedules={allSchedules}
       />
 
-      {/* Notification */}
       <Snackbar 
         open={notification.open} 
         autoHideDuration={6000} 
@@ -897,7 +1006,15 @@ const CollectionSchedule = () => {
         <Alert 
           onClose={handleCloseNotification} 
           severity={notification.severity}
-          sx={{ width: '100%', boxShadow: '0 3px 10px rgba(0,0,0,0.15)', borderRadius: '8px' }}
+          sx={{ 
+            width: '100%', 
+            boxShadow: '0 8px 24px rgba(0,0,0,0.2)', 
+            borderRadius: 2,
+            fontWeight: 500,
+            '& .MuiAlert-icon': {
+              fontSize: 28
+            }
+          }}
         >
           {notification.message}
         </Alert>
@@ -906,4 +1023,4 @@ const CollectionSchedule = () => {
   );
 };
 
-export default CollectionSchedule; 
+export default CollectionSchedule;
