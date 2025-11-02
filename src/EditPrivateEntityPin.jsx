@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, CircularProgress, Alert, Snackbar, Button, TextField, MenuItem } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  CircularProgress, 
+  Alert, 
+  Snackbar, 
+  Button, 
+  TextField, 
+  MenuItem,
+  Paper,
+  Card,
+  CardContent,
+  Divider,
+  Fade,
+  Zoom,
+  Chip,
+  Stack
+} from '@mui/material';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './CollectionPoints.css'; // Reuse map styles
@@ -243,19 +260,75 @@ const EditPrivateEntityPin = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 3 }}>
-        <CircularProgress />
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%)',
+          p: 3 
+        }}
+      >
+        <CircularProgress 
+          size={60} 
+          thickness={4}
+          sx={{ 
+            color: '#4CAF50',
+            '& .MuiCircularProgress-circle': {
+              strokeLinecap: 'round',
+            }
+          }} 
+        />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-         <Button variant="contained" onClick={() => navigate('/private-dashboard')} sx={{ mt: 2 }}>
-            Go back to Dashboard
-         </Button>
+      <Box 
+        sx={{ 
+          p: 3,
+          height: '100vh',
+          background: 'linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Card 
+          sx={{ 
+            maxWidth: 500,
+            borderRadius: 3,
+            boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
+          }}
+        >
+          <CardContent sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h5" sx={{ mb: 2, color: '#d32f2f', fontWeight: 600 }}>
+              ⚠️ Error
+            </Typography>
+            <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/private-dashboard')} 
+              sx={{
+                textTransform: 'none',
+                borderRadius: '12px',
+                px: 4,
+                py: 1.5,
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #388e3c 0%, #4CAF50 100%)',
+                  boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                },
+              }}
+            >
+              Go back to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </Box>
     );
   }
@@ -272,99 +345,273 @@ const EditPrivateEntityPin = () => {
     <Box
       sx={{
         p: 3,
-        bgcolor: '#f8f9fa',
+        background: 'linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 50%, #E8F5E9 100%)',
         width: '100%',
-        overflowY: 'auto',
+        minHeight: '100%',
         boxSizing: 'border-box',
       }}
     >
       {/* Inner Box for Centering Content */}
       <Box sx={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <Typography variant="h4" sx={{ mb: 3 }}>Private Entity Address</Typography>
+        {/* Header Section */}
+        <Fade in timeout={600}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 4,
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #ffffff 0%, #f1f8f4 100%)',
+              border: '2px solid #C8E6C9',
+              boxShadow: '0 8px 24px rgba(76, 175, 80, 0.12)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 2,
+                  fontSize: '28px',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                }}
+              >
+                📍
+              </Box>
+              <Box>
+                <Typography 
+                  variant="h4" 
+                  sx={{ 
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #2e7d32 0%, #4CAF50 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-0.5px',
+                  }}
+                >
+                  Edit Entity Location
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#5a7a5d', mt: 0.5 }}>
+                  Update your private entity address and pin location
+                </Typography>
+              </Box>
+            </Box>
 
-        {/* Back Button */}
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/private-dashboard')}
-          sx={{
-            mt: 2, // Add some top margin
-            mb: 3, // Add some bottom margin
-            textTransform: 'none',
-            borderRadius: '8px',
-            borderColor: '#616161', // A neutral color for back button
-            color: '#616161',
-            '&:hover': {
-              bgcolor: '#eeeeee',
-              borderColor: '#424242',
-            }
-          }}
-        >
-          Back to Dashboard
-        </Button>
+            {/* Back Button */}
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/private-dashboard')}
+              sx={{
+                mt: 2,
+                textTransform: 'none',
+                borderRadius: '12px',
+                px: 3,
+                py: 1.2,
+                fontWeight: 600,
+                borderColor: '#4CAF50',
+                color: '#4CAF50',
+                borderWidth: 2,
+                '&:hover': {
+                  borderWidth: 2,
+                  bgcolor: '#E8F5E9',
+                  borderColor: '#388e3c',
+                  transform: 'translateX(-4px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+            >
+              ← Back to Dashboard
+            </Button>
+          </Paper>
+        </Fade>
 
-        <Box sx={{ height: '500px', width: '100%', mb: 3 }}> {/* Adjust map height as needed */}
-          {markerPosition && (
-             <MapContainer
-               center={[markerPosition.lat, markerPosition.lng]} // Center map on the marker
-               zoom={14}
-               style={{ height: '100%', width: '100%' }}
-             >
-               <TileLayer
-                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-               />
+        {/* Map Section */}
+        <Zoom in timeout={800}>
+          <Paper
+            elevation={0}
+            sx={{
+              mb: 4,
+              borderRadius: 3,
+              overflow: 'hidden',
+              border: '3px solid #4CAF50',
+              boxShadow: '0 12px 32px rgba(76, 175, 80, 0.2)',
+            }}
+          >
+            <Box 
+              sx={{ 
+                p: 2, 
+                background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                color: 'white',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                📍 Interactive Map - Click or Drag to Set Location
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.9 }}>
+                Click anywhere on the map to place your pin, or drag the existing marker to adjust
+              </Typography>
+            </Box>
+            <Box sx={{ height: '500px', width: '100%' }}>
+              {markerPosition && (
+                <MapContainer
+                  center={[markerPosition.lat, markerPosition.lng]}
+                  zoom={14}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  />
 
-               {/* Add MapClickEvent component to listen for clicks */}
-               <MapClickEvent onMapClick={handleMapClick} />
+                  {/* Add MapClickEvent component to listen for clicks */}
+                  <MapClickEvent onMapClick={handleMapClick} />
 
-               {markerPosition && (
-                 <Marker
-                   position={[markerPosition.lat, markerPosition.lng]}
-                 >
-                   <Popup>
-                     {/* Popup content - display current info */}
-                     <Box>
-                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{entityData.entityName || 'Private Entity'}</Typography>
-                       <Typography variant="body2">Waste Type: {entityData.entityWasteType || 'N/A'}</Typography>
-                       <Typography variant="body2">Status: {entityData.entityStatus || 'N/A'}</Typography>
-                       <Typography variant="body2">Address: {entityData.address || 'N/A'}</Typography>
-                     </Box>
-                   </Popup>
-                 </Marker>
-               )}
-             </MapContainer>
-          )}
-        </Box>
+                  {markerPosition && (
+                    <Marker
+                      position={[markerPosition.lat, markerPosition.lng]}
+                    >
+                      <Popup>
+                        {/* Popup content - display current info */}
+                        <Box sx={{ minWidth: 200 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#2e7d32', mb: 1 }}>
+                            {entityData.entityName || 'Private Entity'}
+                          </Typography>
+                          <Divider sx={{ my: 1 }} />
+                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                            <strong>Waste Type:</strong> {entityData.entityWasteType || 'N/A'}
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                            <strong>Status:</strong>{' '}
+                            <Chip 
+                              label={entityData.entityStatus || 'N/A'} 
+                              size="small"
+                              sx={{ 
+                                bgcolor: entityData.entityStatus === 'OPEN' ? '#C8E6C9' : '#FFCDD2',
+                                color: entityData.entityStatus === 'OPEN' ? '#2e7d32' : '#c62828',
+                                fontWeight: 600,
+                                fontSize: '11px',
+                              }}
+                            />
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontSize: '12px', color: '#666' }}>
+                            <strong>Address:</strong> {entityData.address || 'N/A'}
+                          </Typography>
+                        </Box>
+                      </Popup>
+                    </Marker>
+                  )}
+                </MapContainer>
+              )}
+            </Box>
+          </Paper>
+        </Zoom>
 
-        {/* Form to edit details */}
-         <Box component="form" sx={{ mb: 3 }} noValidate autoComplete="off">
-            <Typography variant="h5" sx={{ mb: 2 }}>Edit Details</Typography>
-            <TextField
+        {/* Form Section */}
+        <Fade in timeout={1000}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #ffffff 0%, #f1f8f4 100%)',
+              border: '2px solid #C8E6C9',
+              boxShadow: '0 8px 24px rgba(76, 175, 80, 0.12)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #66BB6A 0%, #81C784 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 2,
+                  fontSize: '24px',
+                  boxShadow: '0 4px 12px rgba(102, 187, 106, 0.3)',
+                }}
+              >
+                ✏️
+              </Box>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: '#2e7d32',
+                  letterSpacing: '-0.3px',
+                }}
+              >
+                Entity Details
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 4, borderColor: '#C8E6C9' }} />
+
+            <Box component="form" noValidate autoComplete="off">
+              <TextField
                 label="Entity Name"
                 name="entityName"
                 value={formData.entityName}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-            />
-             <TextField
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: '#4CAF50',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#4CAF50',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#4CAF50',
+                  },
+                }}
+              />
+              <TextField
                 label="Waste Type"
                 name="entityWasteType"
                 value={formData.entityWasteType}
                 onChange={handleInputChange}
-                select // Use select for dropdown
+                select
                 fullWidth
                 margin="normal"
-            >
-                <MenuItem value="General Waste">General Waste</MenuItem>
-                <MenuItem value="Plastic">Plastic</MenuItem>
-                <MenuItem value="Paper">Paper</MenuItem>
-                <MenuItem value="Glass">Glass</MenuItem>
-                <MenuItem value="Metal">Metal</MenuItem>
-                <MenuItem value="Organic">Organic</MenuItem>
-                <MenuItem value="Electronic">Electronic</MenuItem>
-            </TextField>
-             <TextField
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: '#4CAF50',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#4CAF50',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#4CAF50',
+                  },
+                }}
+              >
+                <MenuItem value="General Waste">♻️ General Waste</MenuItem>
+                <MenuItem value="Plastic">🔷 Plastic</MenuItem>
+                <MenuItem value="Paper">📄 Paper</MenuItem>
+                <MenuItem value="Glass">🥃 Glass</MenuItem>
+                <MenuItem value="Metal">🔩 Metal</MenuItem>
+                <MenuItem value="Organic">🍃 Organic</MenuItem>
+                <MenuItem value="Electronic">💻 Electronic</MenuItem>
+              </TextField>
+              <TextField
                 label="Address"
                 name="address"
                 value={formData.address}
@@ -373,34 +620,119 @@ const EditPrivateEntityPin = () => {
                 margin="normal"
                 multiline
                 rows={3}
-            />
-            <Typography variant="body1" sx={{ mt: 2 }}>Latitude: {markerPosition.lat.toFixed(6)}</Typography>
-            <Typography variant="body1" sx={{ mb: 2 }}>Longitude: {markerPosition.lng.toFixed(6)}</Typography>
+                sx={{
+                  mb: 3,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: '#4CAF50',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#4CAF50',
+                      borderWidth: 2,
+                    },
+                  },
+                  '& .MuiInputLabel-root.Mui-focused': {
+                    color: '#4CAF50',
+                  },
+                }}
+              />
 
-            <Button
+              {/* Coordinates Display */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  mb: 3,
+                  borderRadius: 2,
+                  bgcolor: '#E8F5E9',
+                  border: '2px solid #C8E6C9',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ color: '#2e7d32', fontWeight: 600, mb: 2 }}>
+                  📌 Current Coordinates
+                </Typography>
+                <Stack direction="row" spacing={3}>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#5a7a5d', fontWeight: 500, mb: 0.5 }}>
+                      Latitude
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#2e7d32', fontWeight: 700 }}>
+                      {markerPosition.lat.toFixed(6)}
+                    </Typography>
+                  </Box>
+                  <Divider orientation="vertical" flexItem sx={{ borderColor: '#C8E6C9' }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#5a7a5d', fontWeight: 500, mb: 0.5 }}>
+                      Longitude
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: '#2e7d32', fontWeight: 700 }}>
+                      {markerPosition.lng.toFixed(6)}
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+
+              {/* Save Button */}
+              <Button
                 variant="contained"
-                color="primary"
                 onClick={handleSave}
-                disabled={loading} // Disable while saving
-            >
-                Save Changes
-            </Button>
-
-         </Box>
-
+                disabled={loading}
+                fullWidth
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '12px',
+                  py: 1.8,
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                  boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #388e3c 0%, #4CAF50 100%)',
+                    boxShadow: '0 8px 28px rgba(76, 175, 80, 0.5)',
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:disabled': {
+                    background: '#C8E6C9',
+                    color: '#fff',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {loading ? (
+                  <CircularProgress size={24} sx={{ color: 'white' }} />
+                ) : (
+                  '💾 Save Changes'
+                )}
+              </Button>
+            </Box>
+          </Paper>
+        </Fade>
       </Box>
-       <Snackbar
-          open={notification.open}
-          autoHideDuration={6000}
-          onClose={handleCloseNotification}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity}
+          sx={{
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            '& .MuiAlert-icon': {
+              fontSize: '24px',
+            },
+          }}
         >
-          <Alert onClose={handleCloseNotification} severity={notification.severity}>
-            {notification.message}
-          </Alert>
-        </Snackbar>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
-export default EditPrivateEntityPin; 
+export default EditPrivateEntityPin;

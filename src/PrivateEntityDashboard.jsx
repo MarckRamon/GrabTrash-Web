@@ -9,14 +9,20 @@ import {
   Alert,
   CircularProgress,
   Button,
-  Stack
+  Stack,
+  Card,
+  CardContent,
+  Divider,
+  Fade,
+  Zoom,
+  Chip,
+  Avatar
 } from '@mui/material';
 import { BarChart, PieChart } from '@mui/x-charts';
 import { useNavigate } from 'react-router-dom';
 import api from './api/axios';
-import logo from '/logo.png'; // Assuming your logo is in the public folder
+import logo from '/logo.png';
 
-// Mock data for the chart
 const monthlyData = [
   { month: 'JAN', value: 100 },
   { month: 'FEB', value: 150 },
@@ -37,17 +43,15 @@ const PrivateEntityDashboard = () => {
   const [totalPickupTrash, setTotalPickupTrash] = useState(0);
   const [totalCollectionPoints, setTotalCollectionPoints] = useState(0);
   const [topLocations, setTopLocations] = useState([]);
-  const [status, setStatus] = useState('closed'); // Default to closed
+  const [status, setStatus] = useState('closed');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [barangays, setBarangays] = useState([]); // Add state for barangays
+  const [barangays, setBarangays] = useState([]);
 
-  // Get current user ID and entity ID
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = currentUser.userId;
-  const entityId = currentUser.entityId; // Assuming entityId is stored in user object
+  const entityId = currentUser.entityId;
 
-  // Fetch dashboard data and initial status
   useEffect(() => {
     const fetchData = async () => {
       if (!userId) {
@@ -60,11 +64,9 @@ const PrivateEntityDashboard = () => {
         setLoading(true);
         setError('');
 
-        // Fetch stats relevant to private entity
         const statsResponse = await api.get('/payments/dashboard/stats');
         setTotalPickupTrash(statsResponse.data.totalPickupTrashOrdered || 0);
 
-        // Fetch collection points
         try {
           const collectionPointsResponse = await api.get('/pickup-locations');
           const locations = collectionPointsResponse.data.locations || [];
@@ -74,32 +76,27 @@ const PrivateEntityDashboard = () => {
           console.error('Error fetching public collection points:', error);
         }
 
-        // Fetch top locations
         const topRes = await api.get('/payments/top-barangays');
         setTopLocations(Array.isArray(topRes.data) ? topRes.data : []);
 
-        // Fetch all barangays
         try {
-          const barangaysRes = await api.get('/barangays'); // Assuming this endpoint exists
+          const barangaysRes = await api.get('/barangays');
           setBarangays(Array.isArray(barangaysRes.data) ? barangaysRes.data : []);
         } catch (barangaysError) {
           console.error('Error fetching barangays:', barangaysError);
-          setBarangays([]); // Default to empty array on error
+          setBarangays([]);
         }
 
-        // Fetch initial private entity status
         if (userId) {
           try {
             const entityResponse = await api.get(`/private-entities/${userId}`);
             if (entityResponse.data && entityResponse.data.entityStatus) {
               setStatus(entityResponse.data.entityStatus.toLowerCase());
             } else {
-              // If no entity found or status missing, assume default status
               setStatus('closed');
             }
           } catch (entityError) {
             console.error('Error fetching private entity status:', entityError);
-            // If fetching entity fails, default to closed status
             setStatus('closed');
           }
         } else {
@@ -115,58 +112,49 @@ const PrivateEntityDashboard = () => {
       }
     };
     fetchData();
-  }, [userId, entityId]); // Depend on userId and entityId
+  }, [userId, entityId]);
 
-  // Handle status toggle
   const handleStatusChange = async (event) => {
     const newStatus = event.target.checked ? 'open' : 'closed';
-    const previousStatus = status; // Store previous status in case of API error
-    setStatus(newStatus); // Optimistically update status
-    setError(''); // Clear previous errors
+    const previousStatus = status;
+    setStatus(newStatus);
+    setError('');
 
     if (!userId) {
       setError('User ID not found. Cannot update status.');
-      setStatus(previousStatus); // Revert status
+      setStatus(previousStatus);
       return;
     }
 
     try {
-      // Send status to backend using userId instead of entityId
       await api.put(`/private-entities/${userId}`, { entityStatus: newStatus.toUpperCase() });
     } catch (err) {
       setError(`Failed to update status to ${newStatus}. Please try again.`);
       console.error('Status update error:', err);
-      setStatus(previousStatus); // Revert status on error
+      setStatus(previousStatus);
     }
   };
 
-  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('firestoreAuthToken'); // Assuming you use this too
-    navigate('/', { replace: true }); // Redirect to login page and clear history
+    localStorage.removeItem('firestoreAuthToken');
+    navigate('/', { replace: true });
   };
 
-  // Handle navigate to profile
   const handleGoToProfile = () => {
     navigate('/profile');
   };
 
-  // Handle navigate to edit pin page
   const handleGoToEditPin = () => {
-    // Navigate to the new edit pin page
-    // We don't need to pass entityId in the route if we fetch it from local storage in the new page
     navigate('/private-dashboard/edit-pin');
   };
 
-  // Helper to find barangay name by ID
   const getBarangayName = (barangayId) => {
     const barangay = barangays.find(b => b.barangayId === barangayId);
     return barangay ? barangay.name : barangayId || 'Unknown';
   };
 
-  // Prepare data for Pie Chart
   const pieChartData = topLocations.map(loc => ({
     id: loc.barangayId,
     value: loc.count,
@@ -175,8 +163,77 @@ const PrivateEntityDashboard = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 3 }}>
-        <CircularProgress />
+      <Box 
+        sx={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          background: 'linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 50%, #A5D6A7 100%)',
+          p: 3 
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            width: 100,
+            height: 100,
+            mb: 4,
+          }}
+        >
+          <CircularProgress 
+            size={100} 
+            thickness={3}
+            sx={{ 
+              color: '#4CAF50',
+              position: 'absolute',
+              '& .MuiCircularProgress-circle': {
+                strokeLinecap: 'round',
+              }
+            }} 
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontSize: '40px',
+              animation: 'bounce 2s ease-in-out infinite',
+              '@keyframes bounce': {
+                '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+                '50%': { transform: 'translate(-50%, -60%) scale(1.1)' },
+              },
+            }}
+          >
+            📊
+          </Box>
+        </Box>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            color: '#2e7d32',
+            fontWeight: 700,
+            mb: 1,
+          }}
+        >
+          Loading Dashboard
+        </Typography>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            color: '#5a7a5d',
+            fontWeight: 500,
+            animation: 'pulse 2s ease-in-out infinite',
+            '@keyframes pulse': {
+              '0%, 100%': { opacity: 1 },
+              '50%': { opacity: 0.5 },
+            },
+          }}
+        >
+          Please wait while we fetch your data...
+        </Typography>
       </Box>
     );
   }
@@ -185,275 +242,883 @@ const PrivateEntityDashboard = () => {
     <Box 
       sx={{
         p: 3,
-        bgcolor: '#f8f9fa',
-        width: '100%', // Take full width of parent
-        overflowY: 'auto', // Enable vertical scrolling
-        boxSizing: 'border-box', // Include padding in width/height
+        background: 'linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 30%, #E8F5E9 70%, #C8E6C9 100%)',
+        width: '100%',
+        minHeight: '100vh',
+        boxSizing: 'border-box',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '400px',
+          background: 'radial-gradient(circle at 50% 0%, rgba(76, 175, 80, 0.15) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        },
       }}
     >
-      {/* Inner Box for Centering Content */}
-      <Box sx={{ maxWidth: '1200px', margin: '0 auto' }}> {/* Centered content within the scrollable box */}
-        {/* Add the logo here */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <img 
-            src={logo} 
-            alt="GrabTrash Logo" 
-            style={{
-              maxWidth: '200px', // Adjust size as needed
-              height: 'auto',
-            }}
-          />
-        </Box>
+      <Box sx={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        {/* Enhanced Logo Section */}
+        <Fade in timeout={600}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 4,
+                bgcolor: 'white',
+                borderRadius: 4,
+                boxShadow: '0 12px 40px rgba(76, 175, 80, 0.2)',
+                display: 'inline-block',
+                border: '3px solid rgba(200, 230, 201, 0.5)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 50%, #4CAF50 100%)',
+                },
+              }}
+            >
+              <img 
+                src={logo} 
+                alt="GrabTrash Logo" 
+                style={{
+                  maxWidth: '220px',
+                  height: 'auto',
+                  display: 'block',
+                  filter: 'drop-shadow(0 4px 8px rgba(76, 175, 80, 0.2))',
+                }}
+              />
+            </Paper>
+          </Box>
+        </Fade>
         
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, color: '#333' }}>
-            Private Entity Dashboard
-          </Typography>
-          <Stack direction="row" spacing={2}> {/* Use Stack for buttons */}
-               <Button 
-                  variant="outlined" 
-                  onClick={handleGoToProfile}
-                  sx={{
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      borderColor: '#4CAF50',
-                      color: '#4CAF50',
-                      '&:hover': {
-                          bgcolor: '#E8F5E9',
-                          borderColor: '#43A047',
-                      }
-                  }}
-               >
-                  Edit Profile
-              </Button>
-              {/* Add Edit Pin button */}
-               <Button 
-                  variant="outlined" 
-                  onClick={handleGoToEditPin}
-                  sx={{
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      borderColor: '#1976d2', // Using a blue color for this button
-                      color: '#1976d2',
-                      '&:hover': {
-                          bgcolor: '#e3f2fd',
-                          borderColor: '#1565c0',
-                      }
-                  }}
-               >
-                  Edit Pin
+        {/* Enhanced Header Section */}
+        <Zoom in timeout={700}>
+          <Paper
+            elevation={0}
+            sx={{ 
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              justifyContent: 'space-between', 
+              alignItems: { xs: 'stretch', md: 'center' },
+              gap: 3,
+              mb: 4,
+              p: 4,
+              bgcolor: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 4,
+              boxShadow: '0 8px 32px rgba(76, 175, 80, 0.15)',
+              border: '2px solid rgba(200, 230, 201, 0.5)',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '28px',
+                  boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                }}
+              >
+                📊
+              </Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #2e7d32 0%, #4CAF50 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '-1px',
+                }}
+              >
+                Dashboard
+              </Typography>
+            </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Button 
+                variant="contained"
+                onClick={handleGoToProfile}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '16px',
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  background: 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%)',
+                  boxShadow: '0 6px 20px rgba(76, 175, 80, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #388e3c 100%)',
+                    boxShadow: '0 8px 28px rgba(76, 175, 80, 0.45)',
+                    transform: 'translateY(-3px)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <Box sx={{ fontSize: '20px' }}>👤</Box>
+                Edit Profile
               </Button>
               <Button 
-                variant="outlined" 
-                color="error" 
+                variant="contained"
+                onClick={handleGoToEditPin}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '16px',
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  background: 'linear-gradient(135deg, #81C784 0%, #66BB6A 100%)',
+                  boxShadow: '0 6px 20px rgba(129, 199, 132, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%)',
+                    boxShadow: '0 8px 28px rgba(129, 199, 132, 0.45)',
+                    transform: 'translateY(-3px)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <Box sx={{ fontSize: '20px' }}>📍</Box>
+                Edit Pin
+              </Button>
+              <Button 
+                variant="outlined"
                 onClick={handleLogout}
                 sx={{
                   textTransform: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '16px',
+                  px: 4,
+                  py: 1.5,
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  borderColor: '#ef5350',
+                  color: '#ef5350',
+                  borderWidth: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  '&:hover': {
+                    borderWidth: 2,
+                    borderColor: '#d32f2f',
+                    bgcolor: 'rgba(239, 83, 80, 0.08)',
+                    transform: 'translateY(-3px)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
+                <Box sx={{ fontSize: '20px' }}>🚪</Box>
                 Logout
               </Button>
-          </Stack>
-        </Box>
+            </Stack>
+          </Paper>
+        </Zoom>
 
-        {/* Status Bar */}
-        <Box sx={{ mb: 4 }}>
-          <Paper sx={{ p: 2.5, borderRadius: 2, display: 'flex', alignItems: 'center', bgcolor: status === 'open' ? '#E8F5E9' : '#FFEBEE' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={status === 'open'}
-                  onChange={handleStatusChange}
-                  color="success"
-                />
-              }
-              label={status === 'open' ? 'Open for Delivery' : 'Not Available for Delivery'}
-              sx={{
-                '.MuiTypography-root': {
-                  fontWeight: 600,
-                  color: status === 'open' ? '#388e3c' : '#d32f2f',
-                  fontSize: '1.1rem',
+        {/* Enhanced Status Bar */}
+        <Fade in timeout={800}>
+          <Box sx={{ mb: 4 }}>
+            <Paper 
+              elevation={0}
+              sx={{ 
+                p: 4,
+                borderRadius: 4,
+                background: status === 'open' 
+                  ? 'linear-gradient(135deg, rgba(200, 230, 201, 0.8) 0%, rgba(165, 214, 167, 0.6) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 205, 210, 0.8) 0%, rgba(239, 154, 154, 0.6) 100%)',
+                border: `3px solid ${status === 'open' ? '#4CAF50' : '#ef5350'}`,
+                boxShadow: status === 'open' 
+                  ? '0 12px 40px rgba(76, 175, 80, 0.25)'
+                  : '0 12px 40px rgba(239, 83, 80, 0.25)',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '100%',
+                  background: status === 'open'
+                    ? 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.1) 0%, transparent 50%)'
+                    : 'radial-gradient(circle at 20% 50%, rgba(239, 83, 80, 0.1) 0%, transparent 50%)',
+                  pointerEvents: 'none',
                 },
               }}
-            />
-          </Paper>
-        </Box>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-        )}
-
-        {/* Stats Section Header */}
-        <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 2 }}>
-          Overview
-        </Typography>
-
-        {/* Stats Grid */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6}>
-            <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontSize: '14px' }}>
-                Total Pickup Trash Ordered
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, color: '#333' }}>
-                {totalPickupTrash.toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Paper sx={{ p: 2.5, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontSize: '14px' }}>
-                Total Collection Points
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, color: '#333' }}>
-                {totalCollectionPoints.toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* Top Locations Section Header and Content */}
-         <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 2 }}>
-          Top Most Ordered Locations
-        </Typography>
-
-        <Grid container spacing={3}> {/* Use Grid to layout list and pie chart */}
-          {/* Top Most Ordered Location Pickup List */}
-          <Grid item xs={12} md={6}> {/* Takes 6 columns on medium and up screens */}
-            <Paper 
-              sx={{ 
-                p: 3, 
-                borderRadius: 2, 
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                bgcolor: 'white',
-                height: '100%', // Ensure equal height if needed
-              }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 3 }}>
-                Top Most Ordered Location Pickup
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {topLocations.length === 0 && (
-                  <Typography color="text.secondary">No data available.</Typography>
-                )}
-                {topLocations.map((loc, idx) => (
-                  <Box key={loc.barangayId || idx}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box
-                        component="span"
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={status === 'open'}
+                    onChange={handleStatusChange}
+                    sx={{
+                      width: 70,
+                      height: 40,
+                      padding: 0,
+                      '& .MuiSwitch-switchBase': {
+                        padding: 0,
+                        margin: '4px',
+                        transitionDuration: '300ms',
+                        '&.Mui-checked': {
+                          transform: 'translateX(30px)',
+                          color: '#fff',
+                          '& + .MuiSwitch-track': {
+                            backgroundColor: '#4CAF50',
+                            opacity: 1,
+                            border: 0,
+                          },
+                        },
+                      },
+                      '& .MuiSwitch-thumb': {
+                        boxSizing: 'border-box',
+                        width: 32,
+                        height: 32,
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                      },
+                      '& .MuiSwitch-track': {
+                        borderRadius: 20,
+                        backgroundColor: '#ef5350',
+                        opacity: 1,
+                        transition: 'background-color 300ms',
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 2 }}>
+                    <Box
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        bgcolor: status === 'open' ? '#4CAF50' : '#ef5350',
+                        boxShadow: `0 0 20px ${status === 'open' ? '#4CAF50' : '#ef5350'}`,
+                        animation: 'pulse-glow 2s ease-in-out infinite',
+                        '@keyframes pulse-glow': {
+                          '0%, 100%': { 
+                            boxShadow: `0 0 20px ${status === 'open' ? '#4CAF50' : '#ef5350'}`,
+                            transform: 'scale(1)',
+                          },
+                          '50%': { 
+                            boxShadow: `0 0 30px ${status === 'open' ? '#4CAF50' : '#ef5350'}`,
+                            transform: 'scale(1.1)',
+                          },
+                        },
+                      }}
+                    />
+                    <Box>
+                      <Typography
                         sx={{
-                          width: 48,
-                          height: 48,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          bgcolor: '#f1f5f9',
-                          borderRadius: 1,
-                          mr: 2,
-                          fontSize: '24px'
+                          fontWeight: 800,
+                          color: status === 'open' ? '#2e7d32' : '#c62828',
+                          fontSize: '1.4rem',
+                          letterSpacing: '0.5px',
+                          lineHeight: 1.2,
                         }}
                       >
-                        🚛
-                      </Box>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: '#333', 
-                          fontWeight: 500,
-                          fontSize: '16px',
-                        }}
-                      >
-                        {getBarangayName(loc.barangayId)}
+                        {status === 'open' ? 'Open for Delivery' : 'Not Available for Delivery'}
                       </Typography>
-                    </Box>
-                    <Box sx={{ position: 'relative', height: 8, width: '100%', mb: 1 }}>
-                      <Box
+                      <Typography
+                        variant="caption"
                         sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '100%',
-                          borderRadius: 4,
-                          bgcolor: '#E8F5E9',
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: `${(loc.count / (topLocations[0]?.count || 1)) * 100}%`, // Ensure denominator is not zero
-                          height: '100%',
-                          borderRadius: 4,
-                          background: 'linear-gradient(90deg, #4CAF50 0%, #43A047 100%)',
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: '#333', 
-                          fontWeight: 500,
-                          fontSize: '16px',
+                          color: status === 'open' ? '#5a7a5d' : '#a94442',
+                          fontWeight: 600,
+                          fontSize: '13px',
                         }}
                       >
-                        {loc.count.toLocaleString()}
+                        {status === 'open' ? 'Accepting pickup requests' : 'Currently unavailable'}
                       </Typography>
                     </Box>
                   </Box>
-                ))}
-              </Box>
+                }
+              />
             </Paper>
-          </Grid>
-          
-          {/* Pie Chart for Top Locations */}
-          <Grid item xs={12} md={6}> {/* Takes 6 columns on medium and up screens */}
-             <Paper 
+          </Box>
+        </Fade>
+
+        {error && (
+          <Fade in>
+            <Alert 
+              severity="error"
+              variant="filled"
               sx={{ 
-                p: 3, 
-                borderRadius: 2, 
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                bgcolor: 'white',
-                height: '100%', // Ensure equal height if needed
-                display: 'flex', // Use flex to center chart vertically
-                flexDirection: 'column',
-                alignItems: 'center', // Center chart horizontally
-                justifyContent: 'center', // Center chart vertically
+                mb: 4,
+                borderRadius: 3,
+                boxShadow: '0 8px 24px rgba(211, 47, 47, 0.25)',
+                fontWeight: 600,
+                fontSize: '15px',
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#333', mb: 2 }}>
-                Location Distribution
-              </Typography>
-              {topLocations.length > 0 ? (
-                 <Box sx={{ width: '100%', height: 300 }}> {/* Container for the Pie Chart */}
-                   <PieChart
-                     series={[
-                       {
-                         data: pieChartData,
-                         highlightScope: { faded: 'global', highlighted: 'item' },
-                         faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
-                         arcLabel: (item) => `(${(item.value / totalPickupTrash * 100).toFixed(1)}%)`, // Display percentage
-                         outerRadius: 120,
-                         innerRadius: 60,
-                         paddingAngle: 5,
-                         cornerRadius: 5,
-                         startAngle: -90,
-                         endAngle: 180,
-                       },
-                     ]}
-                     height={300}
-                     margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                     // Optional: Add legend
-                     legend={{ hidden: false, direction: 'column', position: { vertical: 'top', horizontal: 'right' } }}
-                   />
-                 </Box>
-              ) : (
-                <Typography color="text.secondary">No data available for chart.</Typography>
-              )}
-            </Paper>
+              {error}
+            </Alert>
+          </Fade>
+        )}
+
+        {/* Stats Section Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, ml: 1 }}>
+          <Box sx={{ fontSize: '28px' }}>📈</Box>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 800,
+              color: '#2e7d32',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Overview
+          </Typography>
+        </Box>
+
+        {/* Enhanced Stats Grid */}
+        <Grid container spacing={3} sx={{ mb: 5 }}>
+          <Grid item xs={12} sm={6}>
+            <Zoom in timeout={600}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  height: '100%',
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '2px solid rgba(200, 230, 201, 0.5)',
+                  boxShadow: '0 12px 40px rgba(76, 175, 80, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-12px)',
+                    boxShadow: '0 20px 56px rgba(76, 175, 80, 0.25)',
+                    borderColor: '#4CAF50',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '5px',
+                    background: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%)',
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 3,
+                        fontSize: '32px',
+                        boxShadow: '0 8px 20px rgba(76, 175, 80, 0.4)',
+                      }}
+                    >
+                      🗑️
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#5a7a5d',
+                        fontWeight: 700,
+                        fontSize: '16px',
+                        letterSpacing: '0.3px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Total Pickup Trash Ordered
+                    </Typography>
+                  </Box>
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900,
+                      background: 'linear-gradient(135deg, #2e7d32 0%, #4CAF50 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      letterSpacing: '-2px',
+                    }}
+                  >
+                    {totalPickupTrash.toLocaleString()}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#81C784',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      mt: 1,
+                      display: 'block',
+                    }}
+                  >
+                    All time total
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Zoom>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <Zoom in timeout={800}>
+              <Card 
+                elevation={0}
+                sx={{ 
+                  height: '100%',
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '2px solid rgba(200, 230, 201, 0.5)',
+                  boxShadow: '0 12px 40px rgba(76, 175, 80, 0.15)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-12px)',
+                    boxShadow: '0 20px 56px rgba(76, 175, 80, 0.25)',
+                    borderColor: '#4CAF50',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '5px',
+                    background: 'linear-gradient(90deg, #66BB6A 0%, #81C784 100%)',
+                  },
+                }}
+              >
+                <CardContent sx={{ p: 4 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                    <Box
+                      sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #66BB6A 0%, #81C784 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 3,
+                        fontSize: '32px',
+                        boxShadow: '0 8px 20px rgba(102, 187, 106, 0.4)',
+                      }}
+                    >
+                      📍
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#5a7a5d',
+                        fontWeight: 700,
+                        fontSize: '16px',
+                        letterSpacing: '0.3px',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Total Collection Points
+                    </Typography>
+                  </Box>
+                  <Typography 
+                    variant="h2" 
+                    sx={{ 
+                      fontWeight: 900,
+                      background: 'linear-gradient(135deg, #2e7d32 0%, #4CAF50 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      letterSpacing: '-2px',
+                    }}
+                  >
+                    {totalCollectionPoints.toLocaleString()}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#81C784',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      mt: 1,
+                      display: 'block',
+                    }}
+                  >
+                    Active locations
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Zoom>
+          </Grid>
+        </Grid>
+
+        {/* Top Locations Section Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, ml: 1 }}>
+          <Box sx={{ fontSize: '28px' }}>🏆</Box>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 800,
+              color: '#2e7d32',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Top Locations
+          </Typography>
+        </Box>
+
+        <Grid container spacing={3}>
+          {/* Enhanced Top Locations List */}
+          <Grid item xs={12} md={6}>
+            <Fade in timeout={1000}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 5,
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '2px solid rgba(200, 230, 201, 0.5)',
+                  boxShadow: '0 12px 40px rgba(76, 175, 80, 0.15)',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 3,
+                      fontSize: '28px',
+                      boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                    }}
+                  >
+                    📊
+                  </Box>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 800,
+                      color: '#2e7d32',
+                      letterSpacing: '-0.3px',
+                    }}
+                  >
+                    Most Ordered Locations
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 4, borderColor: 'rgba(200, 230, 201, 0.5)' }} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {topLocations.length === 0 && (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <Box sx={{ fontSize: '64px', mb: 2, opacity: 0.5 }}>📦</Box>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          color: '#81C784',
+                          fontWeight: 600,
+                        }}
+                      >
+                        No data available yet
+                      </Typography>
+                    </Box>
+                  )}
+                  {topLocations.map((loc, idx) => (
+                    <Box 
+                      key={loc.barangayId || idx}
+                      sx={{
+                        p: 3,
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, rgba(249, 253, 249, 0.8) 0%, rgba(232, 245, 233, 0.4) 100%)',
+                        border: '2px solid rgba(200, 230, 201, 0.5)',
+                        position: 'relative',
+                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, rgba(232, 245, 233, 0.9) 0%, rgba(200, 230, 201, 0.5) 100%)',
+                          transform: 'translateX(12px)',
+                          boxShadow: '0 8px 24px rgba(76, 175, 80, 0.2)',
+                          borderColor: '#4CAF50',
+                        },
+                        '&::before': {
+                          content: `"${idx + 1}"`,
+                          position: 'absolute',
+                          top: -12,
+                          left: 16,
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          background: idx === 0 
+                            ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+                            : idx === 1
+                            ? 'linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%)'
+                            : idx === 2
+                            ? 'linear-gradient(135deg, #CD7F32 0%, #B87333 100%)'
+                            : 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: 800,
+                          fontSize: '14px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2.5, mt: 1 }}>
+                        <Box
+                          component="span"
+                          sx={{
+                            width: 56,
+                            height: 56,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%)',
+                            borderRadius: 3,
+                            mr: 3,
+                            fontSize: '28px',
+                            boxShadow: '0 4px 12px rgba(76, 175, 80, 0.25)',
+                          }}
+                        >
+                          🚛
+                        </Box>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: '#2e7d32',
+                              fontWeight: 700,
+                              fontSize: '18px',
+                              letterSpacing: '0.2px',
+                              mb: 0.5,
+                            }}
+                          >
+                            {getBarangayName(loc.barangayId)}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: '#5a7a5d',
+                              fontWeight: 600,
+                              fontSize: '13px',
+                            }}
+                          >
+                            {loc.count} {loc.count === 1 ? 'pickup' : 'pickups'}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="h4" 
+                          sx={{ 
+                            color: '#2e7d32',
+                            fontWeight: 800,
+                            fontSize: '28px',
+                          }}
+                        >
+                          {loc.count.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ position: 'relative', height: 12, width: '100%', mb: 1 }}>
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '100%',
+                            borderRadius: 6,
+                            bgcolor: 'rgba(232, 245, 233, 0.8)',
+                            border: '1px solid rgba(200, 230, 201, 0.5)',
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: `${(loc.count / (topLocations[0]?.count || 1)) * 100}%`,
+                            height: '100%',
+                            borderRadius: 6,
+                            background: 'linear-gradient(90deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%)',
+                            boxShadow: '0 2px 8px rgba(76, 175, 80, 0.4)',
+                            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                          }}
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: '#81C784',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                          }}
+                        >
+                          {((loc.count / (topLocations[0]?.count || 1)) * 100).toFixed(1)}% of top location
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            </Fade>
+          </Grid>
+          
+          {/* Enhanced Pie Chart */}
+          <Grid item xs={12} md={6}>
+            <Fade in timeout={1200}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 5,
+                  borderRadius: 4,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  border: '2px solid rgba(200, 230, 201, 0.5)',
+                  boxShadow: '0 12px 40px rgba(76, 175, 80, 0.15)',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, width: '100%' }}>
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #66BB6A 0%, #81C784 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 3,
+                      fontSize: '28px',
+                      boxShadow: '0 6px 16px rgba(102, 187, 106, 0.4)',
+                    }}
+                  >
+                    📈
+                  </Box>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 800,
+                      color: '#2e7d32',
+                      letterSpacing: '-0.3px',
+                    }}
+                  >
+                    Distribution
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 4, width: '100%', borderColor: 'rgba(200, 230, 201, 0.5)' }} />
+                {topLocations.length > 0 ? (
+                  <Box 
+                    sx={{ 
+                      width: '100%',
+                      height: 400,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                    }}
+                  >
+                    <PieChart
+                      series={[
+                        {
+                          data: pieChartData,
+                          highlightScope: { faded: 'global', highlighted: 'item' },
+                          faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                          arcLabel: (item) => `${(item.value / totalPickupTrash * 100).toFixed(1)}%`,
+                          outerRadius: 140,
+                          innerRadius: 75,
+                          paddingAngle: 3,
+                          cornerRadius: 10,
+                          startAngle: -90,
+                          endAngle: 270,
+                          cx: '50%',
+                          cy: '50%',
+                        },
+                      ]}
+                      colors={['#4CAF50', '#66BB6A', '#81C784', '#A5D6A7', '#C8E6C9', '#2e7d32', '#43A047', '#388e3c']}
+                      height={400}
+                      margin={{ top: 10, bottom: 10, left: 10, right: 120 }}
+                      slotProps={{
+                        legend: {
+                          direction: 'column',
+                          position: { vertical: 'middle', horizontal: 'right' },
+                          padding: 0,
+                          itemMarkWidth: 14,
+                          itemMarkHeight: 14,
+                          markGap: 8,
+                          itemGap: 10,
+                          labelStyle: {
+                            fontSize: 14,
+                            fill: '#2e7d32',
+                            fontWeight: 600,
+                          },
+                        },
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 10 }}>
+                    <Box 
+                      sx={{ 
+                        fontSize: '80px',
+                        mb: 3,
+                        opacity: 0.3,
+                        animation: 'float 3s ease-in-out infinite',
+                        '@keyframes float': {
+                          '0%, 100%': { transform: 'translateY(0)' },
+                          '50%': { transform: 'translateY(-20px)' },
+                        },
+                      }}
+                    >
+                      📊
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        color: '#81C784',
+                        fontWeight: 700,
+                        mb: 1,
+                      }}
+                    >
+                      No chart data available
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#A5D6A7',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Data will appear once pickups are ordered
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+            </Fade>
           </Grid>
         </Grid>
       </Box>
@@ -461,4 +1126,4 @@ const PrivateEntityDashboard = () => {
   );
 };
 
-export default PrivateEntityDashboard; 
+export default PrivateEntityDashboard;
