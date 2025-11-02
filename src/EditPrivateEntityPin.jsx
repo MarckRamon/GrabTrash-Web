@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import 'leaflet/dist/leaflet.css';
 import './CollectionPoints.css'; // Reuse map styles
 import L from 'leaflet';
-import axios from 'axios';
+import api from './api/axios';
 import { useNavigate } from 'react-router-dom';
 
 // Fix for default marker icon
@@ -14,18 +14,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-// API base URL
-const API_BASE_URL = 'http://localhost:8080';
-
-// Get JWT token from localStorage
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
-};
 
 // Custom Hook to handle marker drag events
 function DraggableMarkerEvents({ onDragEnd }) {
@@ -98,13 +86,7 @@ const EditPrivateEntityPin = () => {
       try {
         setLoading(true);
         setError('');
-        const response = await axios.get(
-          `${API_BASE_URL}/api/private-entities/${userId}`, // Use userId here for fetching
-          {
-            headers: getAuthHeader(),
-            withCredentials: true,
-          }
-        );
+        const response = await api.get(`/private-entities/${userId}`);
 
         console.log('Fetched entity data:', response.data);
 
@@ -232,14 +214,7 @@ const EditPrivateEntityPin = () => {
 
             console.log('Saving updated entity data:', updatedData);
 
-            const response = await axios.put(
-                `${API_BASE_URL}/api/private-entities/${userId}`,
-                updatedData,
-                {
-                    headers: getAuthHeader(),
-                    withCredentials: true,
-                }
-            );
+            const response = await api.put(`/private-entities/${userId}`, updatedData);
 
             console.log('Save response:', response.data);
 
