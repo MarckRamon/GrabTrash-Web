@@ -134,7 +134,7 @@ const CreateUserDialog = ({ open, onClose, onUserCreated }) => {
                 <MenuItem value="admin">Admin</MenuItem>
                 <MenuItem value="private_entity">Private Entity</MenuItem>
                 <MenuItem value="driver">Driver</MenuItem>
-                <MenuItem value="user">User</MenuItem>
+                <MenuItem value="customer">Customer</MenuItem>
               </Select>
             </FormControl>
             <TextField label="Phone Number" name="phoneNumber" value={form.phoneNumber} onChange={handleChange} required />

@@ -217,6 +217,16 @@ const Users = () => {
     return { bg: 'rgba(67, 160, 71, 0.15)', color: '#43a047' };
   };
 
+  const getRoleLabel = (role) => {
+    const roleLower = role?.toLowerCase() || '';
+    if (roleLower === 'user' || roleLower === 'customer') return 'Customer';
+    if (roleLower === 'private_entity') return 'Private Entity';
+    if (roleLower === 'collector') return 'Collector';
+    if (roleLower === 'driver') return 'Driver';
+    if (roleLower === 'admin') return 'Admin';
+    return role || 'N/A';
+  };
+
   const userStats = {
     total: users.length,
     admins: users.filter(u => u.role.toLowerCase().includes('admin')).length,
@@ -560,7 +570,7 @@ const Users = () => {
                       <TableCell>
                         <Chip 
                           icon={getRoleIcon(user.role)}
-                          label={user.role}
+                          label={getRoleLabel(user.role)}
                           size="small"
                           sx={{
                             bgcolor: getRoleColor(user.role).bg,
