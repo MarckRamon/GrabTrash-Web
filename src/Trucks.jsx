@@ -103,29 +103,37 @@ const Trucks = () => {
     try {
       setLoading(true);
       const data = await api.fetchAllTrucks();
-      
-      const driversData = await api.fetchAllUsers();
-      const driverUsers = driversData.filter(user => 
-        user.role && user.role.toLowerCase().includes('driver')
-      );
-      
-      const driverMap = {};
-      driverUsers.forEach(driver => {
-        driverMap[driver.userId] = {
-          firstName: driver.firstName,
-          lastName: driver.lastName,
-          email: driver.email
-        };
-      });
-      
+
+      // Try to build a map of drivers from all users (OPTIONAL – trucks may already contain driverName)
+      let driverMap = {};
+      try {
+        const driversData = await api.fetchAllUsers();
+        const driverUsers = driversData.filter(user => 
+          user.role && user.role.toLowerCase().includes('driver')
+        );
+        driverUsers.forEach(driver => {
+          const key = driver.userId || driver.id || driver.uid;
+          if (!key) return;
+          const name =
+            `${driver.firstName || ''} ${driver.lastName || ''}`.trim() ||
+            driver.username ||
+            driver.email ||
+            'Driver';
+          driverMap[key] = name;
+        });
+      } catch (err) {
+        console.warn('Unable to fetch drivers list, falling back to truck data only:', err);
+      }
+
       const enhancedTrucks = data.map(truck => {
-        const driverName = truck.driverId && driverMap[truck.driverId] 
-          ? `${driverMap[truck.driverId].firstName} ${driverMap[truck.driverId].lastName}`
-          : null;
-        
+        const driverId = truck.driverId || truck.driverID || (truck.driver && (truck.driver.userId || truck.driver.id));
+        const nameFromMap = driverId ? driverMap[driverId] : null;
+        const nameFromTruck = truck.driverName || truck.assignedDriverName || null;
+
         return {
           ...truck,
-          driverName
+          driverId,
+          driverName: nameFromMap || nameFromTruck || null,
         };
       });
       
@@ -780,6 +788,7 @@ const Trucks = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          {/* Edit truck details */}
                           <Tooltip title="Edit Truck">
                             <IconButton 
                               onClick={() => handleOpenDialog(truck)} 
@@ -787,13 +796,31 @@ const Trucks = () => {
                               sx={{
                                 color: '#2196f3',
                                 '&:hover': {
-                                  bgcolor: 'rgba(46, 125, 50, 0.1)',
+                                  bgcolor: 'rgba(33, 150, 243, 0.08)',
+                                },
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+
+                          {/* Assign or Change driver */}
+                          <Tooltip title={truck.driverId ? 'Change Driver' : 'Assign Driver'}>
+                            <IconButton 
+                              onClick={() => handleAssignDriver(truck)} 
+                              size="small"
+                              sx={{
+                                color: '#4CAF50',
+                                '&:hover': {
+                                  bgcolor: 'rgba(76, 175, 80, 0.1)',
                                 },
                               }}
                             >
                               <PersonAdd fontSize="small" />
                             </IconButton>
                           </Tooltip>
+
+                          {/* Remove driver (only if assigned) */}
                           {truck.driverId && (
                             <Tooltip title="Remove Driver">
                               <IconButton 
@@ -810,6 +837,8 @@ const Trucks = () => {
                               </IconButton>
                             </Tooltip>
                           )}
+
+                          {/* Delete truck */}
                           <Tooltip title="Delete Truck">
                             <IconButton 
                               onClick={() => handleDelete(truck.truckId)} 
