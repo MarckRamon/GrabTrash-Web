@@ -23,11 +23,11 @@ import {
   Zoom,
   Tooltip,
 } from '@mui/material';
-import { 
-  Search, 
-  PersonAdd, 
-  Edit, 
-  Delete, 
+import {
+  Search,
+  PersonAdd,
+  Edit,
+  Delete,
   People,
   AdminPanelSettings,
   LocalShipping,
@@ -130,11 +130,11 @@ const Users = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        
+
         if (response.data?.message) {
           alert(response.data.message);
         }
-        
+
         await fetchUsers();
       } catch (error) {
         console.error('Error deleting user:', error);
@@ -232,15 +232,16 @@ const Users = () => {
     admins: users.filter(u => u.role.toLowerCase().includes('admin')).length,
     drivers: users.filter(u => u.role.toLowerCase().includes('driver')).length,
     customers: users.filter(u => u.role.toLowerCase().includes('customer')).length,
+    privateEntities: users.filter(u => u.role.toLowerCase().includes('private')).length,
   };
 
   if (loading) {
     return (
       <AdminLayout>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
         }}>
@@ -254,7 +255,7 @@ const Users = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ 
+      <Box sx={{
         p: { xs: 2, sm: 3, md: 4 },
         background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #e8f5e9 100%)',
         minHeight: '100vh',
@@ -301,9 +302,9 @@ const Users = () => {
                     <People sx={{ fontSize: 36, color: 'white' }} />
                   </Box>
                   <Box>
-                    <Typography 
-                      variant="h3" 
-                      sx={{ 
+                    <Typography
+                      variant="h3"
+                      sx={{
                         fontWeight: 900,
                         background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                         WebkitBackgroundClip: 'text',
@@ -321,11 +322,11 @@ const Users = () => {
                   </Box>
                 </Box>
 
-                <Button 
+                <Button
                   variant="contained"
                   startIcon={<PersonAdd />}
-                  onClick={() => setCreateDialogOpen(true)} 
-                  sx={{ 
+                  onClick={() => setCreateDialogOpen(true)}
+                  sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                     color: 'white',
                     fontWeight: 700,
@@ -352,8 +353,8 @@ const Users = () => {
           {/* Error Alert */}
           {error && (
             <Fade in>
-              <Alert 
-                severity="error" 
+              <Alert
+                severity="error"
                 onClose={() => setError('')}
                 sx={{ mb: 3, borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               >
@@ -364,9 +365,9 @@ const Users = () => {
 
           {/* Statistics Cards */}
           <Zoom in timeout={600}>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(5, 1fr)' },
               gap: 3,
               mb: 4,
             }}>
@@ -433,6 +434,22 @@ const Users = () => {
                   <Person sx={{ fontSize: 40, opacity: 0.3 }} />
                 </Box>
               </Paper>
+
+              <Paper sx={{
+                p: 3,
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+                color: 'white',
+                boxShadow: '0 8px 20px rgba(255, 152, 0, 0.3)',
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>Private Entities</Typography>
+                    <Typography variant="h3" sx={{ fontWeight: 800 }}>{userStats.privateEntities}</Typography>
+                  </Box>
+                  <Business sx={{ fontSize: 40, opacity: 0.3 }} />
+                </Box>
+              </Paper>
             </Box>
           </Zoom>
 
@@ -453,7 +470,7 @@ const Users = () => {
                   placeholder="Search users..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  sx={{ 
+                  sx={{
                     flexGrow: 1,
                     minWidth: '250px',
                     '& .MuiOutlinedInput-root': {
@@ -511,9 +528,9 @@ const Users = () => {
 
           {/* Table Section */}
           <Zoom in timeout={800}>
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
+            <TableContainer
+              component={Paper}
+              sx={{
                 borderRadius: '24px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                 overflow: 'hidden',
@@ -522,7 +539,7 @@ const Users = () => {
             >
               <Table>
                 <TableHead>
-                  <TableRow sx={{ 
+                  <TableRow sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                   }}>
                     <TableCell sx={{ fontWeight: 700, color: 'white', fontSize: '0.95rem', py: 2.5 }}>
@@ -541,12 +558,12 @@ const Users = () => {
                 </TableHead>
                 <TableBody>
                   {sortedUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((user, index) => (
-                    <TableRow 
+                    <TableRow
                       key={user.userId}
-                      sx={{ 
+                      sx={{
                         transition: 'all 0.3s',
                         bgcolor: index % 2 === 0 ? 'white' : 'rgba(46, 125, 50, 0.02)',
-                        '&:hover': { 
+                        '&:hover': {
                           bgcolor: 'rgba(46, 125, 50, 0.08)',
                           transform: 'scale(1.01)',
                         },
@@ -554,7 +571,7 @@ const Users = () => {
                     >
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar sx={{ 
+                          <Avatar sx={{
                             bgcolor: '#2e7d32',
                             width: 40,
                             height: 40,
@@ -568,7 +585,7 @@ const Users = () => {
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip 
+                        <Chip
                           icon={getRoleIcon(user.role)}
                           label={getRoleLabel(user.role)}
                           size="small"
@@ -645,8 +662,8 @@ const Users = () => {
                 page={page}
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                sx={{ 
-                  bgcolor: 'rgba(46, 125, 50, 0.02)', 
+                sx={{
+                  bgcolor: 'rgba(46, 125, 50, 0.02)',
                   borderTop: '2px solid rgba(46, 125, 50, 0.1)',
                 }}
               />
