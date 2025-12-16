@@ -144,32 +144,30 @@ Backend deployment is handled through Render's automatic deployment from the Git
 ### Admin Account
 | Field | Value |
 |-------|-------|
-| Email | `admin@grabtrash.com` |
-| Password | `admin123` |
+| Email | `admin@gmail.com` |
+| Password | `123456` |
 | Role | Admin |
 
 ### Driver Account
 | Field | Value |
 |-------|-------|
-| Email | `driver@grabtrash.com` |
-| Password | `driver123` |
+| Email | `michael12@gmail.com` |
+| Password | `123456` |
 | Role | Driver |
 
 ### Customer Account
 | Field | Value |
 |-------|-------|
-| Email | `customer@grabtrash.com` |
-| Password | `customer123` |
+| Email | `grabtrash@gmail.com` |
+| Password | `123456` |
 | Role | Customer |
 
 ### Private Entity Account
 | Field | Value |
 |-------|-------|
-| Email | `entity@grabtrash.com` |
-| Password | `entity123` |
+| Email | `miggyjunks@gmail.com` |
+| Password | `123456` |
 | Role | Private Entity |
-
-> ⚠️ **Note**: These are sample/dummy credentials for testing purposes. Please update with real credentials for production use.
 
 ---
 
