@@ -157,8 +157,8 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="sm"
       fullWidth
@@ -168,8 +168,8 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
         },
       }}
     >
-      <DialogTitle 
-        sx={{ 
+      <DialogTitle
+        sx={{
           borderBottom: '1px solid #e5e7eb',
           px: 3,
           py: 2,
@@ -185,7 +185,7 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Display user info (non-editable) */}
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ 
+            <Typography sx={{
               color: '#374151',
               fontSize: '14px',
               fontWeight: 500,
@@ -199,7 +199,7 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ 
+            <Typography sx={{
               color: '#374151',
               fontSize: '14px',
               fontWeight: 500,
@@ -213,7 +213,7 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
           </Box>
 
           <Box sx={{ mb: 2 }}>
-            <Typography sx={{ 
+            <Typography sx={{
               color: '#374151',
               fontSize: '14px',
               fontWeight: 500,
@@ -226,8 +226,8 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
             </Typography>
           </Box>
 
-          <FormControl 
-            fullWidth 
+          <FormControl
+            fullWidth
             size="small"
             sx={{
               '& .MuiOutlinedInput-root': {
@@ -250,6 +250,8 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
               <MenuItem value="admin">Admin</MenuItem>
               <MenuItem value="customer">Customer</MenuItem>
               <MenuItem value="collector">Collector</MenuItem>
+              <MenuItem value="driver">Driver</MenuItem>
+              <MenuItem value="private_entity">Private Entity</MenuItem>
             </Select>
           </FormControl>
 
@@ -294,7 +296,7 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
           )}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ 
+      <DialogActions sx={{
         borderTop: '1px solid #e5e7eb',
         px: 3,
         py: 2,

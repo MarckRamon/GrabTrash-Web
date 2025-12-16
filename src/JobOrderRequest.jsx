@@ -28,13 +28,13 @@ import {
   Fade,
   Zoom,
 } from '@mui/material';
-import { 
-  Search, 
-  LocalShipping, 
-  Receipt, 
-  Phone, 
-  LocationOn, 
-  Payment, 
+import {
+  Search,
+  LocalShipping,
+  Receipt,
+  Phone,
+  LocationOn,
+  Payment,
   CheckCircle,
   PendingActions,
   TrendingUp,
@@ -92,6 +92,8 @@ const JobOrderRequest = () => {
     totalAmount: order.totalAmount || '',
     paymentMethod: order.paymentMethod || '',
     truckId: order.truckId || '',
+    trashWeight: order.trashWeight || '',
+    notes: order.notes || '',
   }));
 
   const filteredOrders = mappedOrders.filter(order => {
@@ -135,16 +137,16 @@ const JobOrderRequest = () => {
     setAssignTruckLoading(true);
     try {
       await api.assignTruckToPayment(selectedPaymentForTruck, truckId);
-      
+
       const response = await api.get('/payments');
       setOrders(response.data);
-      
+
       const trucksData = await api.fetchAllTrucks();
       setTrucks(trucksData);
       const map = {};
       trucksData.forEach(t => { map[t.truckId] = t; });
       setTruckMap(map);
-      
+
       handleCloseAssignTruckModal();
     } catch (error) {
       console.error('Error assigning truck:', error);
@@ -156,9 +158,9 @@ const JobOrderRequest = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ 
+      <Box sx={{
         p: { xs: 2, sm: 3, md: 4 },
-       
+
         background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
         minHeight: '100vh',
       }}>
@@ -181,23 +183,23 @@ const JobOrderRequest = () => {
                 width: 70,
                 height: 70,
                 borderRadius: '20px',
-               
+
                 background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-              
+
                 boxShadow: '0 10px 30px rgba(27, 94, 32, 0.4)',
 
               }}>
                 <Receipt sx={{ fontSize: 36, color: 'white' }} />
               </Box>
               <Box>
-                <Typography 
-                  variant="h3" 
-                  sx={{ 
+                <Typography
+                  variant="h3"
+                  sx={{
                     fontWeight: 900,
-                    
+
                     background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
@@ -215,8 +217,8 @@ const JobOrderRequest = () => {
             </Box>
 
             {/* Statistics Cards */}
-            <Box sx={{ 
-              display: 'grid', 
+            <Box sx={{
+              display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
               gap: 2,
               mb: 3,
@@ -225,11 +227,11 @@ const JobOrderRequest = () => {
                 <Paper sx={{
                   p: 2.5,
                   borderRadius: '20px',
-                 
+
                   background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
-                  
+
                   color: 'white',
-                 boxShadow: '0 8px 20px rgba(46, 125, 50, 0.3)',
+                  boxShadow: '0 8px 20px rgba(46, 125, 50, 0.3)',
 
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -306,9 +308,9 @@ const JobOrderRequest = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      
+
                       <Search sx={{ color: '#2e7d32' }} />
-                      
+
                     </InputAdornment>
                   ),
                 }}
@@ -325,7 +327,7 @@ const JobOrderRequest = () => {
                     },
                     '&.Mui-focused': {
                       bgcolor: 'white',
-                      
+
                       boxShadow: '0 0 0 3px rgba(46, 125, 50, 0.1)',
                     },
                   },
@@ -354,9 +356,9 @@ const JobOrderRequest = () => {
 
         {/* Orders Table */}
         <Fade in timeout={1000}>
-          <Paper 
+          <Paper
             elevation={0}
-            sx={{ 
+            sx={{
               borderRadius: '30px',
               overflow: 'hidden',
               background: 'rgba(255, 255, 255, 0.95)',
@@ -368,8 +370,8 @@ const JobOrderRequest = () => {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ 
-                    
+                  <TableRow sx={{
+
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                   }}>
                     <TableCell sx={{ fontWeight: 700, color: 'white', fontSize: '0.95rem', py: 2.5 }}>
@@ -404,129 +406,141 @@ const JobOrderRequest = () => {
                         Truck Status
                       </Box>
                     </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>Trash Weight</TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>Notes</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredOrders
                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                     .map((order, index) => (
-                    <TableRow 
-                      key={order.id}
-                      sx={{
-                       bgcolor: index % 2 === 0 ? 'white' : 'rgba(46, 125, 50, 0.02)',
-                      '&:hover': { 
-                        bgcolor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'scale(1.01)',
-                        },
-                      }}
-                    >
-                      <TableCell>
-                        <Chip 
-                          label={order.receiptNo}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            bgcolor: 'rgba(46, 125, 50, 0.1)',
-                            color: '#2e7d32',
-                            borderRadius: '10px',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                          {order.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontSize: '0.85rem', color: '#666' }}>
-                          {order.phoneNo}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontSize: '0.85rem', color: '#666', maxWidth: 200 }}>
-                          {order.location}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 700, color: '#2e7d32', fontSize: '0.95rem' }}>
-                          ₱{parseFloat(order.totalAmount).toLocaleString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={order.paymentMethod === 'CASH_ON_HAND' ? 'Cash' : 'GCash'}
-                          size="small"
-                          sx={{
-                            bgcolor: order.paymentMethod === 'CASH_ON_HAND' 
-                              ? 'rgba(86, 171, 47, 0.1)' 
-                              : 'rgba(56, 239, 125, 0.1)',
-                            color: order.paymentMethod === 'CASH_ON_HAND' ? '#56ab2f' : '#38ef7d',
-                            fontWeight: 600,
-                            borderRadius: '10px',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {order.truckId ? (
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 1.5,
-                            p: 1.5,
-                            borderRadius: '15px',
-                            bgcolor: 'rgba(56, 171, 47, 0.08)',
-                            border: '2px solid rgba(56, 171, 47, 0.2)',
-                          }}>
-                            <Avatar sx={{ 
-                              bgcolor: '#56ab2f',
-                              width: 40,
-                              height: 40,
-                            }}>
-                              <LocalShipping sx={{ fontSize: 20 }} />
-                            </Avatar>
-                            <Box>
-                              <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#56ab2f' }}>
-                                {truckMap[order.truckId]?.plateNumber || order.truckId}
-                              </Typography>
-                              {truckMap[order.truckId] && (
-                                <Typography sx={{ fontSize: '0.7rem', color: '#666' }}>
-                                  {truckMap[order.truckId].make} {truckMap[order.truckId].model}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        ) : (
-                          <Button 
-                            variant="contained" 
-                            size="small" 
-                            onClick={() => handleOpenAssignTruckModal(order.id)}
-                            startIcon={<LocalShipping />}
+                      <TableRow
+                        key={order.id}
+                        sx={{
+                          bgcolor: index % 2 === 0 ? 'white' : 'rgba(46, 125, 50, 0.02)',
+                          '&:hover': {
+                            bgcolor: 'rgba(46, 125, 50, 0.08)',
+                            transform: 'scale(1.01)',
+                          },
+                        }}
+                      >
+                        <TableCell>
+                          <Chip
+                            label={order.receiptNo}
+                            size="small"
                             sx={{
-                              
-                              background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
-
-                              color: 'white',
                               fontWeight: 700,
-                              borderRadius: '12px',
-                              textTransform: 'none',
-                              px: 2.5,
-                              py: 1,
-                              boxShadow: '0 4px 15px rgba(46, 125, 50, 0.3)',
-                              '&:hover': {
-                              background: 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)',
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)',
-                                
-                                
-                              },
+                              bgcolor: 'rgba(46, 125, 50, 0.1)',
+                              color: '#2e7d32',
+                              borderRadius: '10px',
                             }}
-                          >
-                            Assign Truck
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                            {order.name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontSize: '0.85rem', color: '#666' }}>
+                            {order.phoneNo}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontSize: '0.85rem', color: '#666', maxWidth: 200 }}>
+                            {order.location}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 700, color: '#2e7d32', fontSize: '0.95rem' }}>
+                            ₱{parseFloat(order.totalAmount).toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={order.paymentMethod === 'CASH_ON_HAND' ? 'Cash' : 'GCash'}
+                            size="small"
+                            sx={{
+                              bgcolor: order.paymentMethod === 'CASH_ON_HAND'
+                                ? 'rgba(86, 171, 47, 0.1)'
+                                : 'rgba(56, 239, 125, 0.1)',
+                              color: order.paymentMethod === 'CASH_ON_HAND' ? '#56ab2f' : '#38ef7d',
+                              fontWeight: 600,
+                              borderRadius: '10px',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {order.truckId ? (
+                            <Box sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              p: 1.5,
+                              borderRadius: '15px',
+                              bgcolor: 'rgba(56, 171, 47, 0.08)',
+                              border: '2px solid rgba(56, 171, 47, 0.2)',
+                            }}>
+                              <Avatar sx={{
+                                bgcolor: '#56ab2f',
+                                width: 40,
+                                height: 40,
+                              }}>
+                                <LocalShipping sx={{ fontSize: 20 }} />
+                              </Avatar>
+                              <Box>
+                                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#56ab2f' }}>
+                                  {truckMap[order.truckId]?.plateNumber || order.truckId}
+                                </Typography>
+                                {truckMap[order.truckId] && (
+                                  <Typography sx={{ fontSize: '0.7rem', color: '#666' }}>
+                                    {truckMap[order.truckId].make} {truckMap[order.truckId].model}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          ) : (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => handleOpenAssignTruckModal(order.id)}
+                              startIcon={<LocalShipping />}
+                              sx={{
+
+                                background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
+
+                                color: 'white',
+                                fontWeight: 700,
+                                borderRadius: '12px',
+                                textTransform: 'none',
+                                px: 2.5,
+                                py: 1,
+                                boxShadow: '0 4px 15px rgba(46, 125, 50, 0.3)',
+                                '&:hover': {
+                                  background: 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)',
+
+
+                                },
+                              }}
+                            >
+                              Assign Truck
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontSize: '0.9rem', color: '#666' }}>
+                            {order.trashWeight ? `${order.trashWeight} kg` : '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography sx={{ fontSize: '0.9rem', color: '#666', maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={order.notes}>
+                            {order.notes || '-'}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -538,7 +552,7 @@ const JobOrderRequest = () => {
               page={page}
               onPageChange={handleChangePage}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              sx={{ 
+              sx={{
                 bgcolor: 'rgba(46, 125, 50, 0.03)',
                 borderTop: '2px solid rgba(46, 125, 50, 0.1)',
 
@@ -552,25 +566,25 @@ const JobOrderRequest = () => {
         </Fade>
 
         {/* Assign Truck Modal */}
-        <Dialog 
-          open={assignTruckModalOpen} 
+        <Dialog
+          open={assignTruckModalOpen}
           onClose={handleCloseAssignTruckModal}
           TransitionComponent={Zoom}
-          PaperProps={{ 
-            sx: { 
-              borderRadius: '30px', 
+          PaperProps={{
+            sx: {
+              borderRadius: '30px',
               p: 2,
               minWidth: '500px',
               background: 'rgba(255, 255, 255, 0.98)',
               backdropFilter: 'blur(20px)',
               boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            } 
+            }
           }}
         >
-          <DialogTitle sx={{ 
+          <DialogTitle sx={{
             fontWeight: 800,
             fontSize: '1.8rem',
-            
+
             background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -591,23 +605,23 @@ const JobOrderRequest = () => {
           </DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             {assignTruckLoading ? (
-              <Box sx={{ 
-                display: 'flex', 
+              <Box sx={{
+                display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center', 
-                alignItems: 'center', 
+                justifyContent: 'center',
+                alignItems: 'center',
                 minHeight: 200,
                 gap: 2,
               }}>
-                <CircularProgress 
+                <CircularProgress
                   size={60}
                   thickness={4}
-                  sx={{ 
+                  sx={{
                     color: '#2e7d32',
                     '& .MuiCircularProgress-circle': {
                       strokeLinecap: 'round',
                     }
-                  }} 
+                  }}
                 />
                 <Typography sx={{ color: '#666', fontWeight: 600 }}>
                   Assigning truck...
@@ -616,8 +630,8 @@ const JobOrderRequest = () => {
             ) : (
               <Box>
                 {trucks.filter(truck => truck.status === 'AVAILABLE').length === 0 ? (
-                  <Box sx={{ 
-                    textAlign: 'center', 
+                  <Box sx={{
+                    textAlign: 'center',
                     py: 6,
                     color: '#999',
                   }}>
@@ -635,7 +649,7 @@ const JobOrderRequest = () => {
                       .filter(truck => truck.status === 'AVAILABLE')
                       .map((truck, index) => (
                         <Zoom in key={truck.truckId} timeout={300 + index * 100}>
-                          <ListItem 
+                          <ListItem
                             onClick={() => handleAssignTruck(truck.truckId)}
                             sx={{
                               borderRadius: '20px',
@@ -653,7 +667,7 @@ const JobOrderRequest = () => {
                               },
                             }}
                           >
-                            <Avatar sx={{ 
+                            <Avatar sx={{
                               mr: 2.5,
                               width: 65,
                               height: 65,
@@ -662,10 +676,10 @@ const JobOrderRequest = () => {
                             }}>
                               <LocalShipping sx={{ fontSize: 32 }} />
                             </Avatar>
-                            <ListItemText 
+                            <ListItemText
                               primary={
-                                <Typography sx={{ 
-                                  fontWeight: 800, 
+                                <Typography sx={{
+                                  fontWeight: 800,
                                   fontSize: '1.1rem',
                                   color: '#11998e',
                                   mb: 0.5,
@@ -675,11 +689,11 @@ const JobOrderRequest = () => {
                               }
                               secondary={
                                 <Box component="span" sx={{ display: 'block' }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    component="span" 
-                                    sx={{ 
-                                      color: '#666', 
+                                  <Typography
+                                    variant="body2"
+                                    component="span"
+                                    sx={{
+                                      color: '#666',
                                       display: 'block',
                                       fontWeight: 600,
                                       mb: 1,
@@ -688,10 +702,10 @@ const JobOrderRequest = () => {
                                     {truck.make} {truck.model}
                                   </Typography>
                                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                    <Chip 
+                                    <Chip
                                       label={truck.size}
                                       size="small"
-                                      sx={{ 
+                                      sx={{
                                         bgcolor: 'rgba(56, 171, 47, 0.15)',
                                         color: '#56ab2f',
                                         fontWeight: 700,
@@ -699,10 +713,10 @@ const JobOrderRequest = () => {
                                         borderRadius: '8px',
                                       }}
                                     />
-                                    <Chip 
+                                    <Chip
                                       label={truck.wasteType}
                                       size="small"
-                                      sx={{ 
+                                      sx={{
                                         bgcolor: 'rgba(247, 151, 30, 0.15)',
                                         color: '#f7971e',
                                         fontWeight: 700,
@@ -710,11 +724,11 @@ const JobOrderRequest = () => {
                                         borderRadius: '8px',
                                       }}
                                     />
-                                    <Chip 
+                                    <Chip
                                       label="Available"
                                       size="small"
                                       icon={<CheckCircle sx={{ fontSize: 14 }} />}
-                                      sx={{ 
+                                      sx={{
                                         bgcolor: 'rgba(67, 233, 123, 0.15)',
                                         color: '#43e97b',
                                         fontWeight: 700,
@@ -725,8 +739,8 @@ const JobOrderRequest = () => {
                                   </Box>
                                 </Box>
                               }
-                              secondaryTypographyProps={{ 
-                                component: 'div' 
+                              secondaryTypographyProps={{
+                                component: 'div'
                               }}
                             />
                           </ListItem>
@@ -738,7 +752,7 @@ const JobOrderRequest = () => {
             )}
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-            <Button 
+            <Button
               onClick={handleCloseAssignTruckModal}
               sx={{
                 color: '#2e7d32',

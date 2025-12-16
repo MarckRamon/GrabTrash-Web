@@ -158,45 +158,40 @@ const Users = () => {
 
   const handleSaveUser = async (updatedUser) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please log in again.');
-        navigate('/');
-        return;
-      }
-
-      await api.put(`/users/${updatedUser.userId}`, updatedUser, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
+      // usage of api.patch was removed because EditUserDialog already handles the update.
+      // Just refresh the list.
       await fetchUsers();
       handleCloseDialog();
     } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Failed to update user. Please try again.');
+      console.error('Error refreshing users:', error);
+      alert('Failed to refresh users list.');
     }
   };
 
   const filteredUsers = users.filter(user => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
       user.email.toLowerCase().includes(searchLower) ||
       user.role.toLowerCase().includes(searchLower)
     );
+
+    if (sortBy === 'admin') return matchesSearch && user.role.toLowerCase().includes('admin');
+    if (sortBy === 'driver') return matchesSearch && user.role.toLowerCase().includes('driver');
+    if (sortBy === 'private_entity') return matchesSearch && user.role.toLowerCase().includes('private');
+    if (sortBy === 'customer') return matchesSearch && (user.role.toLowerCase() === 'user' || user.role.toLowerCase() === 'customer');
+
+    return matchesSearch;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    if (sortBy === 'newest') {
+    if (sortBy === 'newest' || ['admin', 'driver', 'private_entity', 'customer'].includes(sortBy)) {
+      // Default sort (newest) for these filters
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     } else if (sortBy === 'oldest') {
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     } else if (sortBy === 'name') {
       return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
-    } else if (sortBy === 'role') {
-      return a.role.localeCompare(b.role);
     }
     return 0;
   });
@@ -519,7 +514,10 @@ const Users = () => {
                     <MenuItem value="newest">Newest</MenuItem>
                     <MenuItem value="oldest">Oldest</MenuItem>
                     <MenuItem value="name">Name</MenuItem>
-                    <MenuItem value="role">Role</MenuItem>
+                    <MenuItem value="admin">Admin</MenuItem>
+                    <MenuItem value="customer">Customers</MenuItem>
+                    <MenuItem value="driver">Driver</MenuItem>
+                    <MenuItem value="private_entity">Private Entity</MenuItem>
                   </Select>
                 </Box>
               </Box>

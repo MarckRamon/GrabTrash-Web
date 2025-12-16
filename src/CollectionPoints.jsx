@@ -4,14 +4,16 @@ import 'leaflet/dist/leaflet.css';
 import './CollectionPoints.css';
 import L from 'leaflet';
 import AdminLayout from './components/AdminLayout';
-import { 
-  Box, 
-  Typography, 
-  Snackbar, 
-  Alert, 
-  MenuItem, 
-  Select, 
-  FormControl, 
+import { db } from './firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import {
+  Box,
+  Typography,
+  Snackbar,
+  Alert,
+  MenuItem,
+  Select,
+  FormControl,
   InputLabel,
   Button,
   Paper,
@@ -23,9 +25,9 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LocationOn, 
-  Add, 
+import {
+  LocationOn,
+  Add,
   Close,
   Edit,
   Delete,
@@ -75,7 +77,7 @@ const getAuthHeader = () => {
 // Component for handling map clicks and adding markers
 function MapEvents({ isAddingMarker, onAddMarker }) {
   const map = useMap();
-  
+
   useMapEvents({
     click(e) {
       if (isAddingMarker) {
@@ -151,6 +153,7 @@ function CollectionPoints() {
 
   const fetchPrivateEntities = async () => {
     try {
+      // Fetch from /private-entities endpoint which has latitude/longitude data
       const response = await axios.get(
         `${API_BASE_URL}/private-entities`,
         {
@@ -158,7 +161,10 @@ function CollectionPoints() {
           withCredentials: true
         }
       );
-      setPrivateEntityMarkers(response.data || []);
+
+      const entities = response.data?.entities || response.data || [];
+      console.log('Private entities from API:', entities.length, entities);
+      setPrivateEntityMarkers(entities);
     } catch (error) {
       console.error('Error fetching private entities:', error);
     }
@@ -196,9 +202,9 @@ function CollectionPoints() {
       const response = await axios.get(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
       );
-      
+
       const address = response.data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      
+
       setSelectedLocation({ lat, lng });
       setFormData({ ...formData, address });
     } catch (error) {
@@ -224,7 +230,7 @@ function CollectionPoints() {
       };
 
       const response = await axios.post(
-        `${API_BASE_URL}/pickup-locations`, 
+        `${API_BASE_URL}/pickup-locations`,
         locationData,
         {
           headers: getAuthHeader(),
@@ -379,9 +385,9 @@ function CollectionPoints() {
                   }}>
                     <LocationOn sx={{ fontSize: 28, color: 'white' }} />
                   </Box>
-                  <Typography 
-                    variant="h4" 
-                    sx={{ 
+                  <Typography
+                    variant="h4"
+                    sx={{
                       fontWeight: 800,
                       background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                       WebkitBackgroundClip: 'text',
@@ -396,7 +402,7 @@ function CollectionPoints() {
 
                 {/* Legend */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, ml: 2 }}>
-                  <Chip 
+                  <Chip
                     icon={<Public sx={{ fontSize: 16 }} />}
                     label="Public Dumpsites"
                     size="small"
@@ -408,7 +414,7 @@ function CollectionPoints() {
                       '& .MuiChip-icon': { color: '#2196f3' },
                     }}
                   />
-                  <Chip 
+                  <Chip
                     icon={<Business sx={{ fontSize: 16 }} />}
                     label="Private Entities"
                     size="small"
@@ -420,7 +426,7 @@ function CollectionPoints() {
                       '& .MuiChip-icon': { color: '#f44336' },
                     }}
                   />
-                  <Chip 
+                  <Chip
                     icon={<LocalShipping sx={{ fontSize: 16 }} />}
                     label="Job Orders"
                     size="small"
@@ -469,7 +475,7 @@ function CollectionPoints() {
                   }
                 }}
                 sx={{
-                  background: isAddingMarker 
+                  background: isAddingMarker
                     ? 'linear-gradient(135deg, #f44336 0%, #e53935 100%)'
                     : 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                   color: 'white',
@@ -479,15 +485,15 @@ function CollectionPoints() {
                   borderRadius: '14px',
                   textTransform: 'none',
                   fontSize: '0.95rem',
-                  boxShadow: isAddingMarker 
+                  boxShadow: isAddingMarker
                     ? '0 4px 15px rgba(244, 67, 54, 0.3)'
                     : '0 4px 15px rgba(46, 125, 50, 0.3)',
                   '&:hover': {
-                    background: isAddingMarker 
+                    background: isAddingMarker
                       ? 'linear-gradient(135deg, #d32f2f 0%, #c62828 100%)'
                       : 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)',
                     transform: 'translateY(-2px)',
-                    boxShadow: isAddingMarker 
+                    boxShadow: isAddingMarker
                       ? '0 6px 20px rgba(244, 67, 54, 0.4)'
                       : '0 6px 20px rgba(46, 125, 50, 0.4)',
                   },
@@ -501,12 +507,12 @@ function CollectionPoints() {
         </Fade>
 
         {/* Map Container */}
-        <Box sx={{ 
-          position: 'absolute', 
-          top: '90px', 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
+        <Box sx={{
+          position: 'absolute',
+          top: '90px',
+          left: 0,
+          right: 0,
+          bottom: 0,
           p: 2,
         }}>
           <Zoom in timeout={700}>
@@ -640,31 +646,57 @@ function CollectionPoints() {
                     ))}
 
                     {/* Private Entity markers */}
-                    {privateEntityMarkers && privateEntityMarkers.length > 0 && privateEntityMarkers.map((entity) => (
-                      <Marker
-                        key={entity.entityId}
-                        position={[parseFloat(entity.latitude), parseFloat(entity.longitude)]}
-                        icon={redIcon}
-                      >
-                        <Popup>
-                          <Box sx={{ p: 2 }}>
-                            <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#f44336' }}>
-                              {entity.entityName || 'Private Entity'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 0.5 }}>
-                              <strong>Waste Type:</strong> {entity.entityWasteType || 'N/A'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 0.5 }}>
-                              <strong>Status:</strong> {entity.entityStatus || 'N/A'}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Address:</strong> {entity.address || 'N/A'}
-                            </Typography>
-                          </Box>
-                        </Popup>
-                      </Marker>
-                    ))}
+                    {privateEntityMarkers && privateEntityMarkers.length > 0 && privateEntityMarkers.map((entity, index) => {
+                      // Debug: Log all entity data to see what fields are available
+                      console.log(`Private Entity ${index + 1}:`, {
+                        id: entity.userId || entity.id,
+                        name: entity.firstName || entity.entityName,
+                        latitude: entity.latitude,
+                        longitude: entity.longitude,
+                        allFields: Object.keys(entity)
+                      });
 
+                      const lat = parseFloat(entity.latitude);
+                      const lng = parseFloat(entity.longitude);
+
+                      if (isNaN(lat) || isNaN(lng)) {
+                        console.log(`Skipping entity ${index + 1} due to invalid coordinates: lat=${entity.latitude}, lng=${entity.longitude}`);
+                        return null;
+                      }
+
+                      const markerKey = entity.userId || entity.entityId || `pe-${Math.random()}`;
+                      const name = entity.firstName && entity.lastName
+                        ? `${entity.firstName} ${entity.lastName}`
+                        : (entity.entityName || entity.name || 'Private Entity');
+                      const wasteType = entity.wasteType || entity.entityWasteType || 'N/A';
+                      const status = entity.status || entity.entityStatus || 'Active';
+                      const address = entity.location || entity.address || 'N/A';
+
+                      return (
+                        <Marker
+                          key={markerKey}
+                          position={[lat, lng]}
+                          icon={redIcon}
+                        >
+                          <Popup>
+                            <Box sx={{ p: 2 }}>
+                              <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, color: '#f44336' }}>
+                                {name}
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                <strong>Waste Type:</strong> {wasteType}
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                <strong>Status:</strong> {status}
+                              </Typography>
+                              <Typography variant="body2">
+                                <strong>Address:</strong> {address}
+                              </Typography>
+                            </Box>
+                          </Popup>
+                        </Marker>
+                      );
+                    })}
                     {/* Job Order markers (Green Pins) */}
                     {filteredJobOrderMarkers && filteredJobOrderMarkers.length > 0 && filteredJobOrderMarkers.map((order) => (
                       <Marker
@@ -771,8 +803,8 @@ function CollectionPoints() {
           onClose={handleCloseNotification}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <Alert 
-            onClose={handleCloseNotification} 
+          <Alert
+            onClose={handleCloseNotification}
             severity={notification.severity}
             sx={{ borderRadius: '12px' }}
           >

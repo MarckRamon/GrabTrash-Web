@@ -31,12 +31,12 @@ import {
   Zoom,
   CircularProgress,
 } from '@mui/material';
-import { 
-  Search, 
-  Edit, 
-  Delete, 
-  Add, 
-  PersonAdd, 
+import {
+  Search,
+  Edit,
+  Delete,
+  Add,
+  PersonAdd,
   PersonRemove,
   LocalShipping,
   DirectionsCar,
@@ -108,7 +108,7 @@ const Trucks = () => {
       let driverMap = {};
       try {
         const driversData = await api.fetchAllUsers();
-        const driverUsers = driversData.filter(user => 
+        const driverUsers = driversData.filter(user =>
           user.role && user.role.toLowerCase().includes('driver')
         );
         driverUsers.forEach(driver => {
@@ -126,17 +126,33 @@ const Trucks = () => {
       }
 
       const enhancedTrucks = data.map(truck => {
-        const driverId = truck.driverId || truck.driverID || (truck.driver && (truck.driver.userId || truck.driver.id));
+        let driverId = truck.driverId || truck.driverID || (truck.driver && (truck.driver.userId || truck.driver.id));
+        if (driverId === 'null' || driverId === 'undefined') driverId = null; // Basic cleanup
         const nameFromMap = driverId ? driverMap[driverId] : null;
         const nameFromTruck = truck.driverName || truck.assignedDriverName || null;
 
+        // Calculate status based on driver assignment
+        let calculatedStatus = truck.status;
+        // Check if there is a driver assigned (either ID or name is present)
+        const hasDriver = !!(driverId || nameFromMap || nameFromTruck);
+
+        // Only automate status if not in maintenance
+        if (truck.status !== 'MAINTENANCE') {
+          if (hasDriver) {
+            calculatedStatus = 'CURRENTLY_IN_USE';
+          } else {
+            calculatedStatus = 'AVAILABLE';
+          }
+        }
+
         return {
           ...truck,
+          status: calculatedStatus,
           driverId,
           driverName: nameFromMap || nameFromTruck || null,
         };
       });
-      
+
       setAllTrucks(enhancedTrucks);
       applyFilters(enhancedTrucks, filterType, searchQuery);
     } catch (error) {
@@ -154,7 +170,7 @@ const Trucks = () => {
   const fetchDrivers = async () => {
     try {
       const users = await api.fetchAllUsers();
-      const driverUsers = users.filter(user => 
+      const driverUsers = users.filter(user =>
         user.role && user.role.toLowerCase().includes('driver')
       );
       setDrivers(driverUsers);
@@ -165,13 +181,13 @@ const Trucks = () => {
 
   const applyFilters = (trucksToFilter, filter, search) => {
     let filtered = [...trucksToFilter];
-    
+
     if (filter === 'unassigned') {
       filtered = filtered.filter(truck => !truck.driverId);
     } else if (filter === 'assigned') {
       filtered = filtered.filter(truck => truck.driverId);
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(truck =>
@@ -182,7 +198,7 @@ const Trucks = () => {
         truck.driverName?.toLowerCase().includes(searchLower)
       );
     }
-    
+
     setTrucks(filtered);
   };
 
@@ -274,6 +290,21 @@ const Trucks = () => {
 
     try {
       await api.assignDriverToTruck(selectedTruck.truckId, selectedDriver);
+
+      // Auto-update status to In Use
+      try {
+        // Create a basic update object carrying necessary fields plus the new status
+        // We use selectedTruck properties but force status update
+        const updateData = {
+          ...selectedTruck,
+          status: 'CURRENTLY_IN_USE'
+        };
+        await api.updateTruck(selectedTruck.truckId, updateData);
+      } catch (statusError) {
+        console.warn('Failed to auto-update truck status:', statusError);
+        // Continue anyway as the driver assignment succeeded
+      }
+
       await fetchTrucks();
       handleCloseAssignDialog();
       setSuccess('Driver assigned successfully');
@@ -288,13 +319,37 @@ const Trucks = () => {
     if (window.confirm('Are you sure you want to remove the driver from this truck?')) {
       try {
         await api.removeDriverFromTruck(truckId);
-        await fetchTrucks();
         setSuccess('Driver removed successfully');
-        setTimeout(() => setSuccess(''), 3000);
       } catch (error) {
-        console.error('Error removing driver:', error);
-        setError('Failed to remove driver. Please try again.');
+        console.warn('Primary remove driver failed, attempting fallback update:', error);
+
+        // Fallback: Try to update the truck directly to remove driver
+        try {
+          const truck = trucks.find(t => t.truckId === truckId);
+          if (truck) {
+            const updateData = {
+              ...truck,
+              driverId: null,
+              driverName: null,
+              status: 'AVAILABLE'
+            };
+            // Ensure we don't send derived fields that might confuse the backend
+            delete updateData.driverName;
+
+            await api.updateTruck(truckId, updateData);
+            setSuccess('Driver removed successfully (via update)');
+          } else {
+            throw error; // Throw original error if we can't find truck
+          }
+        } catch (fallbackError) {
+          console.error('Error removing driver:', fallbackError);
+          setError('Failed to remove driver. Please try again.');
+        }
       }
+
+      // Always refresh
+      await fetchTrucks();
+      setTimeout(() => setSuccess(''), 3000);
     }
   };
 
@@ -327,10 +382,10 @@ const Trucks = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
         }}>
@@ -342,7 +397,7 @@ const Trucks = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ 
+      <Box sx={{
         p: { xs: 2, sm: 3, md: 4 },
         background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #e8f5e9 100%)',
         minHeight: '100vh',
@@ -389,9 +444,9 @@ const Trucks = () => {
                     <LocalShipping sx={{ fontSize: 36, color: 'white' }} />
                   </Box>
                   <Box>
-                    <Typography 
-                      variant="h3" 
-                      sx={{ 
+                    <Typography
+                      variant="h3"
+                      sx={{
                         fontWeight: 900,
                         background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                         WebkitBackgroundClip: 'text',
@@ -409,11 +464,11 @@ const Trucks = () => {
                   </Box>
                 </Box>
 
-                <Button 
+                <Button
                   variant="contained"
                   startIcon={<Add />}
-                  onClick={() => handleOpenDialog()} 
-                  sx={{ 
+                  onClick={() => handleOpenDialog()}
+                  sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                     color: 'white',
                     fontWeight: 700,
@@ -440,8 +495,8 @@ const Trucks = () => {
           {/* Alerts */}
           {error && (
             <Fade in>
-              <Alert 
-                severity="error" 
+              <Alert
+                severity="error"
                 onClose={() => setError('')}
                 sx={{ mb: 3, borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               >
@@ -451,8 +506,8 @@ const Trucks = () => {
           )}
           {success && (
             <Fade in>
-              <Alert 
-                severity="success" 
+              <Alert
+                severity="success"
                 onClose={() => setSuccess('')}
                 sx={{ mb: 3, borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               >
@@ -463,8 +518,8 @@ const Trucks = () => {
 
           {/* Statistics Cards */}
           <Zoom in timeout={600}>
-            <Box sx={{ 
-              display: 'grid', 
+            <Box sx={{
+              display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
               gap: 3,
               mb: 4,
@@ -558,7 +613,7 @@ const Trucks = () => {
                   placeholder="Search trucks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  sx={{ 
+                  sx={{
                     flexGrow: 1,
                     minWidth: '250px',
                     '& .MuiOutlinedInput-root': {
@@ -619,9 +674,9 @@ const Trucks = () => {
 
           {/* Table Section */}
           <Zoom in timeout={800}>
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
+            <TableContainer
+              component={Paper}
+              sx={{
                 borderRadius: '24px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                 overflow: 'hidden',
@@ -630,7 +685,7 @@ const Trucks = () => {
             >
               <Table>
                 <TableHead>
-                  <TableRow sx={{ 
+                  <TableRow sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                   }}>
                     <TableCell sx={{ fontWeight: 700, color: 'white', fontSize: '0.95rem', py: 2.5 }}>
@@ -667,19 +722,19 @@ const Trucks = () => {
                 </TableHead>
                 <TableBody>
                   {trucks.map((truck, index) => (
-                    <TableRow 
+                    <TableRow
                       key={truck.truckId}
-                      sx={{ 
+                      sx={{
                         transition: 'all 0.3s',
                         bgcolor: index % 2 === 0 ? 'white' : 'rgba(46, 125, 50, 0.02)',
-                        '&:hover': { 
+                        '&:hover': {
                           bgcolor: 'rgba(46, 125, 50, 0.08)',
                           transform: 'scale(1.01)',
                         },
                       }}
                     >
                       <TableCell>
-                        <Chip 
+                        <Chip
                           label={truck.plateNumber}
                           sx={{
                             fontWeight: 700,
@@ -701,7 +756,7 @@ const Trucks = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
+                        <Chip
                           label={truck.size}
                           size="small"
                           sx={{
@@ -719,13 +774,13 @@ const Trucks = () => {
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontWeight: 700, color: '#2e7d32', fontSize: '0.9rem' }}>
-                          {truck.truckPrice !== undefined && truck.truckPrice !== null 
-                            ? `₱${Number(truck.truckPrice).toLocaleString()}` 
+                          {truck.truckPrice !== undefined && truck.truckPrice !== null
+                            ? `₱${Number(truck.truckPrice).toLocaleString()}`
                             : '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
+                        <Chip
                           label={truck.wasteType}
                           size="small"
                           sx={{
@@ -737,7 +792,7 @@ const Trucks = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Chip 
+                        <Chip
                           icon={getStatusIcon(truck.status)}
                           label={truck.status === 'CURRENTLY_IN_USE' ? 'In Use' : truck.status}
                           size="small"
@@ -753,15 +808,15 @@ const Trucks = () => {
                       </TableCell>
                       <TableCell>
                         {truck.driverName ? (
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
+                          <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
                             gap: 1,
                             p: 1,
                             borderRadius: '12px',
                             bgcolor: 'rgba(46, 125, 50, 0.08)',
                           }}>
-                            <Avatar sx={{ 
+                            <Avatar sx={{
                               bgcolor: '#2e7d32',
                               width: 32,
                               height: 32,
@@ -774,8 +829,8 @@ const Trucks = () => {
                             </Typography>
                           </Box>
                         ) : (
-                          <Chip 
-                            label="Unassigned" 
+                          <Chip
+                            label="Unassigned"
                             size="small"
                             sx={{
                               bgcolor: 'rgba(158, 158, 158, 0.15)',
@@ -790,8 +845,8 @@ const Trucks = () => {
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           {/* Edit truck details */}
                           <Tooltip title="Edit Truck">
-                            <IconButton 
-                              onClick={() => handleOpenDialog(truck)} 
+                            <IconButton
+                              onClick={() => handleOpenDialog(truck)}
                               size="small"
                               sx={{
                                 color: '#2196f3',
@@ -806,8 +861,8 @@ const Trucks = () => {
 
                           {/* Assign or Change driver */}
                           <Tooltip title={truck.driverId ? 'Change Driver' : 'Assign Driver'}>
-                            <IconButton 
-                              onClick={() => handleAssignDriver(truck)} 
+                            <IconButton
+                              onClick={() => handleAssignDriver(truck)}
                               size="small"
                               sx={{
                                 color: '#4CAF50',
@@ -823,8 +878,8 @@ const Trucks = () => {
                           {/* Remove driver (only if assigned) */}
                           {truck.driverId && (
                             <Tooltip title="Remove Driver">
-                              <IconButton 
-                                onClick={() => handleRemoveDriver(truck.truckId)} 
+                              <IconButton
+                                onClick={() => handleRemoveDriver(truck.truckId)}
                                 size="small"
                                 sx={{
                                   color: '#ff9800',
@@ -840,8 +895,8 @@ const Trucks = () => {
 
                           {/* Delete truck */}
                           <Tooltip title="Delete Truck">
-                            <IconButton 
-                              onClick={() => handleDelete(truck.truckId)} 
+                            <IconButton
+                              onClick={() => handleDelete(truck.truckId)}
                               size="small"
                               sx={{
                                 color: '#f44336',
@@ -864,20 +919,20 @@ const Trucks = () => {
         </Box>
 
         {/* Add/Edit Truck Dialog */}
-        <Dialog 
-          open={openDialog} 
-          onClose={handleCloseDialog} 
-          maxWidth="sm" 
-          fullWidth 
-          PaperProps={{ 
-            sx: { 
-              borderRadius: '24px', 
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
               p: 2,
-            } 
+            }
           }}
         >
-          <DialogTitle sx={{ 
-            fontSize: '1.5rem', 
+          <DialogTitle sx={{
+            fontSize: '1.5rem',
             fontWeight: 700,
             color: '#1b5e20',
             pb: 2,
@@ -1050,7 +1105,7 @@ const Trucks = () => {
               </Box>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-              <Button 
+              <Button
                 onClick={handleCloseDialog}
                 sx={{
                   color: '#666',
@@ -1066,7 +1121,7 @@ const Trucks = () => {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 variant="contained"
                 sx={{
@@ -1091,20 +1146,20 @@ const Trucks = () => {
         </Dialog>
 
         {/* Assign Driver Dialog */}
-        <Dialog 
-          open={assignDialog} 
-          onClose={handleCloseAssignDialog} 
-          maxWidth="sm" 
-          fullWidth 
-          PaperProps={{ 
-            sx: { 
-              borderRadius: '24px', 
+        <Dialog
+          open={assignDialog}
+          onClose={handleCloseAssignDialog}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
               p: 2,
-            } 
+            }
           }}
         >
-          <DialogTitle sx={{ 
-            fontSize: '1.5rem', 
+          <DialogTitle sx={{
+            fontSize: '1.5rem',
             fontWeight: 700,
             color: '#1b5e20',
             pb: 2,
@@ -1117,9 +1172,9 @@ const Trucks = () => {
           <DialogContent>
             <Box sx={{ pt: 2 }}>
               {drivers.length === 0 ? (
-                <Alert 
-                  severity="warning" 
-                  sx={{ 
+                <Alert
+                  severity="warning"
+                  sx={{
                     borderRadius: '12px',
                     mb: 2,
                   }}
@@ -1143,7 +1198,7 @@ const Trucks = () => {
                     {drivers.map(driver => (
                       <MenuItem key={driver.userId} value={driver.userId}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Avatar sx={{ 
+                          <Avatar sx={{
                             bgcolor: '#2e7d32',
                             width: 32,
                             height: 32,
@@ -1168,7 +1223,7 @@ const Trucks = () => {
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-            <Button 
+            <Button
               onClick={handleCloseAssignDialog}
               sx={{
                 color: '#666',
@@ -1184,7 +1239,7 @@ const Trucks = () => {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleAssignSubmit}
               variant="contained"
               disabled={!selectedDriver}
