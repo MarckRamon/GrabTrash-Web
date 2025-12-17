@@ -131,23 +131,9 @@ const Trucks = () => {
         const nameFromMap = driverId ? driverMap[driverId] : null;
         const nameFromTruck = truck.driverName || truck.assignedDriverName || null;
 
-        // Calculate status based on driver assignment
-        let calculatedStatus = truck.status;
-        // Check if there is a driver assigned (either ID or name is present)
-        const hasDriver = !!(driverId || nameFromMap || nameFromTruck);
-
-        // Only automate status if not in maintenance
-        if (truck.status !== 'MAINTENANCE') {
-          if (hasDriver) {
-            calculatedStatus = 'CURRENTLY_IN_USE';
-          } else {
-            calculatedStatus = 'AVAILABLE';
-          }
-        }
-
+        // Keep the status from the database as-is (no automatic status changes based on driver assignment)
         return {
           ...truck,
-          status: calculatedStatus,
           driverId,
           driverName: nameFromMap || nameFromTruck || null,
         };
@@ -290,20 +276,7 @@ const Trucks = () => {
 
     try {
       await api.assignDriverToTruck(selectedTruck.truckId, selectedDriver);
-
-      // Auto-update status to In Use
-      try {
-        // Create a basic update object carrying necessary fields plus the new status
-        // We use selectedTruck properties but force status update
-        const updateData = {
-          ...selectedTruck,
-          status: 'CURRENTLY_IN_USE'
-        };
-        await api.updateTruck(selectedTruck.truckId, updateData);
-      } catch (statusError) {
-        console.warn('Failed to auto-update truck status:', statusError);
-        // Continue anyway as the driver assignment succeeded
-      }
+      // Status is not automatically updated - user can manually change it
 
       await fetchTrucks();
       handleCloseAssignDialog();
@@ -330,8 +303,8 @@ const Trucks = () => {
             const updateData = {
               ...truck,
               driverId: null,
-              driverName: null,
-              status: 'AVAILABLE'
+              driverName: null
+              // Status is not automatically updated - user can manually change it
             };
             // Ensure we don't send derived fields that might confuse the backend
             delete updateData.driverName;
