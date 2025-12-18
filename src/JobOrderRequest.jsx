@@ -94,6 +94,7 @@ const JobOrderRequest = () => {
     truckId: order.truckId || '',
     trashWeight: order.trashWeight || '',
     notes: order.notes || '',
+    createdAt: order.createdAt || order.timestamp || order.date || new Date().toISOString(),
   }));
 
   const filteredOrders = mappedOrders.filter(order => {
@@ -105,6 +106,20 @@ const JobOrderRequest = () => {
       order.location.toLowerCase().includes(searchLower) ||
       order.paymentMethod.toLowerCase().includes(searchLower)
     );
+  }).sort((a, b) => {
+    if (sortBy === 'newest') {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    }
+    if (sortBy === 'oldest') {
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'amount') {
+      return parseFloat(b.totalAmount || 0) - parseFloat(a.totalAmount || 0);
+    }
+    return 0;
   });
 
   // Calculate statistics
