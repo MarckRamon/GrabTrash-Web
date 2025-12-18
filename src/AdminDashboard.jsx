@@ -166,8 +166,8 @@ const AdminDashboard = () => {
             }
           }
         });
-        const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        const newData = monthNames.map((m, idx) => ({month: m, value: monthlyCounts[idx]}));
+        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const newData = monthNames.map((m, idx) => ({ month: m, value: monthlyCounts[idx] }));
         setMonthlyData(newData);
       } catch (err) {
         setMonthlyData([
@@ -249,8 +249,8 @@ const AdminDashboard = () => {
         const scheduleDate = new Date(collectionDate);
         if (!isNaN(scheduleDate.getTime())) {
           return scheduleDate.getFullYear() === currentYear &&
-                 scheduleDate.getMonth() === currentMonth &&
-                 scheduleDate.getDate() === displayDay;
+            scheduleDate.getMonth() === currentMonth &&
+            scheduleDate.getDate() === displayDay;
         }
         // Fallback to string comparison
         return collectionDate.startsWith(dateStr);
@@ -280,8 +280,8 @@ const AdminDashboard = () => {
         const scheduleDate = new Date(collectionDate);
         if (!isNaN(scheduleDate.getTime())) {
           return scheduleDate.getFullYear() === currentYear &&
-                 scheduleDate.getMonth() === currentMonth &&
-                 scheduleDate.getDate() === displayDay;
+            scheduleDate.getMonth() === currentMonth &&
+            scheduleDate.getDate() === displayDay;
         }
         return collectionDate.startsWith(dateStr);
       }
@@ -356,9 +356,9 @@ const AdminDashboard = () => {
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2.5 }}>
           <Box>
-            <Typography 
-              variant="body2" 
-              sx={{ 
+            <Typography
+              variant="body2"
+              sx={{
                 color: 'rgba(255,255,255,0.9)',
                 fontWeight: 600,
                 mb: 1.5,
@@ -369,9 +369,9 @@ const AdminDashboard = () => {
             >
               {title}
             </Typography>
-            <Typography 
-              variant="h2" 
-              sx={{ 
+            <Typography
+              variant="h2"
+              sx={{
                 fontWeight: 900,
                 color: 'white',
                 letterSpacing: '-2px',
@@ -395,9 +395,9 @@ const AdminDashboard = () => {
             <Icon sx={{ color: 'white', fontSize: 32 }} />
           </Box>
         </Box>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 0.8,
           bgcolor: 'rgba(255,255,255,0.2)',
           borderRadius: '12px',
@@ -417,7 +417,7 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ 
+      <Box sx={{
         p: { xs: 2, sm: 3, md: 4 },
         background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #e8f5e9 100%)',
         minHeight: '100vh',
@@ -444,9 +444,9 @@ const AdminDashboard = () => {
                 borderRadius: '10px',
               }} />
               <Box>
-                <Typography 
-                  variant="h3" 
-                  sx={{ 
+                <Typography
+                  variant="h3"
+                  sx={{
                     fontWeight: 900,
                     background: 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #43a047 100%)',
                     WebkitBackgroundClip: 'text',
@@ -462,16 +462,16 @@ const AdminDashboard = () => {
                 </Typography>
               </Box>
             </Box>
-            
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: 2,
               mt: 3,
             }}>
-              <Chip 
+              <Chip
                 icon={<CalendarTodayIcon />}
                 label={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 sx={{
@@ -485,23 +485,7 @@ const AdminDashboard = () => {
                   '& .MuiChip-icon': { color: '#43a047' },
                 }}
               />
-              <Select
-                value="all-time"
-                sx={{
-                  minWidth: 220,
-                  bgcolor: 'white',
-                  borderRadius: '16px',
-                  fontWeight: 600,
-                  boxShadow: '0 4px 12px rgba(46, 125, 50, 0.1)',
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  '&:hover': { boxShadow: '0 6px 20px rgba(46, 125, 50, 0.15)' },
-                }}
-              >
-                <MenuItem value="all-time">📊 Timeframe: All-time</MenuItem>
-                <MenuItem value="month">📅 This Month</MenuItem>
-                <MenuItem value="week">📆 This Week</MenuItem>
-                <MenuItem value="today">⏰ Today</MenuItem>
-              </Select>
+
             </Box>
           </Box>
 
@@ -612,7 +596,7 @@ const AdminDashboard = () => {
                                 </Typography>
                               </Box>
                             </Box>
-                            <Chip 
+                            <Chip
                               label={barangay.count.toLocaleString()}
                               sx={{
                                 bgcolor: colors[index].badge,
@@ -676,19 +660,7 @@ const AdminDashboard = () => {
                         Monthly collection statistics
                       </Typography>
                     </Box>
-                    <Select value="month" size="small" sx={{
-                      minWidth: 130,
-                      borderRadius: '12px',
-                      bgcolor: '#f1f8f4',
-                      fontWeight: 600,
-                      border: 'none',
-                      '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                      '&:hover': { bgcolor: '#e8f5e9' },
-                    }}>
-                      <MenuItem value="month">Monthly</MenuItem>
-                      <MenuItem value="week">Weekly</MenuItem>
-                      <MenuItem value="year">Yearly</MenuItem>
-                    </Select>
+
                   </Box>
                   <BarChart
                     xAxis={[{ scaleType: 'band', data: monthlyData.map(d => d.month), categoryGapRatio: 0.4 }]}
@@ -801,9 +773,9 @@ const AdminDashboard = () => {
                         >
                           {isValid && (
                             <>
-                              <Typography sx={{ 
-                                fontSize: '0.9rem', 
-                                color: isToday ? 'white' : '#212121', 
+                              <Typography sx={{
+                                fontSize: '0.9rem',
+                                color: isToday ? 'white' : '#212121',
                                 fontWeight: isToday ? 900 : 600,
                                 textShadow: isToday ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
                               }}>
@@ -879,7 +851,7 @@ const AdminDashboard = () => {
                 const isRecurring = schedule.isRecurring === true || schedule.isRecurring === 'true' || schedule.recurring === true || schedule.recurring === 'true';
                 const wasteType = schedule.wasteType || schedule.waste_type || 'NON_BIODEGRADABLE';
                 const isBiodegradable = wasteType === 'BIODEGRADABLE';
-                
+
                 return (
                   <React.Fragment key={schedule.scheduleId || schedule.id || index}>
                     {index > 0 && <Divider />}
