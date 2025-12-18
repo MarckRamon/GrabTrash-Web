@@ -249,7 +249,7 @@ const EditUserDialog = ({ open, onClose, user, onSave }) => {
             >
               <MenuItem value="admin">Admin</MenuItem>
               <MenuItem value="customer">Customer</MenuItem>
-              <MenuItem value="collector">Collector</MenuItem>
+
               <MenuItem value="driver">Driver</MenuItem>
               <MenuItem value="private_entity">Private Entity</MenuItem>
             </Select>
