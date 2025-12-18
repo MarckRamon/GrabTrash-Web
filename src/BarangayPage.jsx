@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -21,6 +21,8 @@ import {
   Zoom,
   Fade,
   IconButton,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import AdminLayout from './components/AdminLayout';
 import api from './api/axios';
@@ -42,7 +44,26 @@ const BarangayPage = () => {
   const [newBarangayName, setNewBarangayName] = useState('');
   const [newBarangayDescription, setNewBarangayDescription] = useState('');
   const [addError, setAddError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
   const navigate = useNavigate();
+
+  // Helper to check if barangay is active
+  const isBarangayActive = (barangay) => {
+    return barangay.isActive === true || barangay.active === true ||
+      barangay.isActive === 'true' || barangay.active === 'true';
+  };
+
+  // Filtered barangays based on status filter
+  const filteredBarangays = useMemo(() => {
+    if (statusFilter === 'all') return barangays;
+    if (statusFilter === 'active') {
+      return barangays.filter(b => isBarangayActive(b));
+    }
+    if (statusFilter === 'inactive') {
+      return barangays.filter(b => !isBarangayActive(b));
+    }
+    return barangays;
+  }, [barangays, statusFilter]);
 
   // Fetch barangays from backend
   const fetchBarangays = async () => {
@@ -85,9 +106,9 @@ const BarangayPage = () => {
     }
     try {
       setAddError('');
-      await api.post('/barangays', { 
-        name: newBarangayName, 
-        description: newBarangayDescription 
+      await api.post('/barangays', {
+        name: newBarangayName,
+        description: newBarangayDescription
       });
       setNewBarangayName('');
       setNewBarangayDescription('');
@@ -158,10 +179,10 @@ const BarangayPage = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
         }}>
@@ -174,14 +195,14 @@ const BarangayPage = () => {
   if (error) {
     return (
       <AdminLayout>
-        <Box sx={{ 
+        <Box sx={{
           p: 3,
           background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%)',
           minHeight: '100vh',
         }}>
-          <Alert 
-            severity="error" 
-            sx={{ 
+          <Alert
+            severity="error"
+            sx={{
               borderRadius: '16px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
             }}
@@ -195,7 +216,7 @@ const BarangayPage = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ 
+      <Box sx={{
         p: { xs: 2, sm: 3, md: 4 },
         background: 'linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #e8f5e9 100%)',
         minHeight: '100vh',
@@ -242,9 +263,9 @@ const BarangayPage = () => {
                     <LocationCityIcon sx={{ fontSize: 36, color: 'white' }} />
                   </Box>
                   <Box>
-                    <Typography 
-                      variant="h3" 
-                      sx={{ 
+                    <Typography
+                      variant="h3"
+                      sx={{
                         fontWeight: 900,
                         background: 'linear-gradient(135deg, #1b5e20 0%, #43a047 100%)',
                         WebkitBackgroundClip: 'text',
@@ -256,15 +277,15 @@ const BarangayPage = () => {
                     >
                       Barangay Management
                     </Typography>
-                    
+
                   </Box>
                 </Box>
 
-                <Button 
+                <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => setAddDialogOpen(true)} 
-                  sx={{ 
+                  onClick={() => setAddDialogOpen(true)}
+                  sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                     color: 'white',
                     fontWeight: 700,
@@ -285,13 +306,54 @@ const BarangayPage = () => {
                   Add New Barangay
                 </Button>
               </Box>
+
+              {/* Filter Tabs */}
+              <Box sx={{ mt: 3 }}>
+                <ToggleButtonGroup
+                  value={statusFilter}
+                  exclusive
+                  onChange={(e, newFilter) => newFilter && setStatusFilter(newFilter)}
+                  aria-label="barangay status filter"
+                  sx={{
+                    '& .MuiToggleButton-root': {
+                      borderRadius: '12px',
+                      px: 3,
+                      py: 1,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      border: '2px solid #e0e0e0',
+                      '&.Mui-selected': {
+                        background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
+                        color: 'white',
+                        border: '2px solid #2e7d32',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%)',
+                        },
+                      },
+                      '&:hover': {
+                        bgcolor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    },
+                  }}
+                >
+                  <ToggleButton value="all">
+                    All ({barangays.length})
+                  </ToggleButton>
+                  <ToggleButton value="active">
+                    Active ({barangays.filter(b => isBarangayActive(b)).length})
+                  </ToggleButton>
+                  <ToggleButton value="inactive">
+                    Inactive ({barangays.filter(b => !isBarangayActive(b)).length})
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
             </Paper>
           </Fade>
 
           {/* Statistics Cards */}
           <Zoom in timeout={600}>
-            <Box sx={{ 
-              display: 'grid', 
+            <Box sx={{
+              display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
               gap: 3,
               mb: 4,
@@ -337,9 +399,9 @@ const BarangayPage = () => {
 
           {/* Table Section */}
           <Zoom in timeout={700}>
-            <TableContainer 
-              component={Paper} 
-              sx={{ 
+            <TableContainer
+              component={Paper}
+              sx={{
                 borderRadius: '24px',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
                 overflow: 'hidden',
@@ -348,40 +410,40 @@ const BarangayPage = () => {
             >
               <Table>
                 <TableHead>
-                  <TableRow sx={{ 
+                  <TableRow sx={{
                     background: 'linear-gradient(135deg, #2e7d32 0%, #43a047 100%)',
                   }}>
-                    <TableCell sx={{ 
-                      fontWeight: 700, 
+                    <TableCell sx={{
+                      fontWeight: 700,
                       color: 'white',
                       fontSize: '0.95rem',
                       py: 2.5,
                     }}>
                       ID
                     </TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 700, 
+                    <TableCell sx={{
+                      fontWeight: 700,
                       color: 'white',
                       fontSize: '0.95rem',
                     }}>
                       Name
                     </TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 700, 
+                    <TableCell sx={{
+                      fontWeight: 700,
                       color: 'white',
                       fontSize: '0.95rem',
                     }}>
                       Status
                     </TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 700, 
+                    <TableCell sx={{
+                      fontWeight: 700,
                       color: 'white',
                       fontSize: '0.95rem',
                     }}>
                       Created At
                     </TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 700, 
+                    <TableCell sx={{
+                      fontWeight: 700,
                       color: 'white',
                       fontSize: '0.95rem',
                     }}>
@@ -390,20 +452,20 @@ const BarangayPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {barangays.map((barangay, index) => (
-                    <TableRow 
+                  {filteredBarangays.map((barangay, index) => (
+                    <TableRow
                       key={barangay.barangayId}
-                      sx={{ 
+                      sx={{
                         transition: 'all 0.3s',
                         bgcolor: index % 2 === 0 ? 'white' : 'rgba(46, 125, 50, 0.02)',
-                        '&:hover': { 
+                        '&:hover': {
                           bgcolor: 'rgba(46, 125, 50, 0.08)',
                           transform: 'scale(1.01)',
                         },
                       }}
                     >
                       <TableCell>
-                        <Chip 
+                        <Chip
                           label={barangay.barangayId}
                           size="small"
                           sx={{
@@ -421,17 +483,17 @@ const BarangayPage = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip 
-                          icon={barangay.active === true || barangay.active === 'true' ? 
-                            <CheckCircleIcon sx={{ fontSize: 16 }} /> : 
+                        <Chip
+                          icon={barangay.active === true || barangay.active === 'true' ?
+                            <CheckCircleIcon sx={{ fontSize: 16 }} /> :
                             <CancelIcon sx={{ fontSize: 16 }} />
                           }
                           label={barangay.active === true || barangay.active === 'true' ? 'Active' : 'Inactive'}
                           size="small"
                           sx={{
-                            bgcolor: barangay.active === true || barangay.active === 'true' ? 
+                            bgcolor: barangay.active === true || barangay.active === 'true' ?
                               'rgba(67, 160, 71, 0.15)' : 'rgba(245, 124, 0, 0.15)',
-                            color: barangay.active === true || barangay.active === 'true' ? 
+                            color: barangay.active === true || barangay.active === 'true' ?
                               '#43a047' : '#f57c00',
                             fontWeight: 700,
                             borderRadius: '10px',
@@ -446,11 +508,11 @@ const BarangayPage = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             startIcon={<CheckCircleIcon />}
-                            onClick={() => handleReactivateBarangay(barangay.barangayId)} 
+                            onClick={() => handleReactivateBarangay(barangay.barangayId)}
                             disabled={barangay.active === true || barangay.active === 'true'}
                             sx={{
                               borderColor: '#43a047',
@@ -470,11 +532,11 @@ const BarangayPage = () => {
                           >
                             Reactivate
                           </Button>
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             startIcon={<DeleteIcon />}
-                            onClick={() => openDeleteDialog(barangay)} 
+                            onClick={() => openDeleteDialog(barangay)}
                             disabled={!(barangay.active === true || barangay.active === 'true')}
                             sx={{
                               borderColor: '#f44336',
@@ -508,16 +570,16 @@ const BarangayPage = () => {
         <Dialog
           open={addDialogOpen}
           onClose={() => setAddDialogOpen(false)}
-          PaperProps={{ 
-            sx: { 
-              borderRadius: '24px', 
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
               p: 2,
               minWidth: { xs: '90%', sm: '500px' },
-            } 
+            }
           }}
         >
-          <DialogTitle sx={{ 
-            fontSize: '1.5rem', 
+          <DialogTitle sx={{
+            fontSize: '1.5rem',
             fontWeight: 700,
             color: '#1b5e20',
             pb: 2,
@@ -572,7 +634,7 @@ const BarangayPage = () => {
             </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-            <Button 
+            <Button
               onClick={() => setAddDialogOpen(false)}
               sx={{
                 color: '#666',
@@ -588,7 +650,7 @@ const BarangayPage = () => {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleAddBarangay}
               variant="contained"
               sx={{
@@ -615,16 +677,16 @@ const BarangayPage = () => {
         <Dialog
           open={deleteDialogOpen}
           onClose={closeDeleteDialog}
-          PaperProps={{ 
-            sx: { 
-              borderRadius: '24px', 
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
               p: 2,
               minWidth: { xs: '90%', sm: '400px' },
-            } 
+            }
           }}
         >
-          <DialogTitle sx={{ 
-            fontSize: '1.5rem', 
+          <DialogTitle sx={{
+            fontSize: '1.5rem',
             fontWeight: 700,
             color: '#d32f2f',
             pb: 2,
@@ -637,7 +699,7 @@ const BarangayPage = () => {
             </Typography>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-            <Button 
+            <Button
               onClick={closeDeleteDialog}
               sx={{
                 color: '#666',
@@ -653,7 +715,7 @@ const BarangayPage = () => {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => handleDeactivateBarangay(barangayToDelete?.barangayId)}
               variant="contained"
               sx={{
