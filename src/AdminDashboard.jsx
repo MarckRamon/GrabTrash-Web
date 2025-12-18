@@ -9,6 +9,16 @@ import {
   Chip,
   Avatar,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
 import AdminLayout from './components/AdminLayout';
@@ -21,6 +31,9 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import RecyclingIcon from '@mui/icons-material/Recycling';
+import RepeatIcon from '@mui/icons-material/Repeat';
 import schedulesService from './services/schedulesService';
 
 const AdminDashboard = () => {
@@ -34,6 +47,9 @@ const AdminDashboard = () => {
   const [selectedBarangay, setSelectedBarangay] = useState(null);
   const [barangaySchedules, setBarangaySchedules] = useState([]);
   const [topBarangays, setTopBarangays] = useState([]);
+  const [selectedDateSchedules, setSelectedDateSchedules] = useState([]);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedDateLabel, setSelectedDateLabel] = useState('');
   const navigate = useNavigate();
   const [monthlyData, setMonthlyData] = useState([
     { month: 'JAN', value: 0 },
@@ -206,12 +222,102 @@ const AdminDashboard = () => {
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const monthName = today.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
   const isDateBooked = (dayNum) => {
-    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(dayNum + 1).padStart(2, '0')}`;
-    return barangaySchedules.some(s => 
-      s.collection_date?.startsWith(dateStr) || 
-      s.collectionDateTime?.startsWith(dateStr)
-    );
+    const displayDay = dayNum + 1;
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(displayDay).padStart(2, '0')}`;
+    const checkDate = new Date(currentYear, currentMonth, displayDay);
+    const dayOfWeek = dayNames[checkDate.getDay()];
+
+    return barangaySchedules.some(s => {
+      // Check if schedule is active
+      const isActive = s.isActive !== undefined ? s.isActive : (s.active !== undefined ? s.active : true);
+      if (!isActive) return false;
+
+      // Check for recurring schedules
+      const isRecurring = s.isRecurring === true || s.isRecurring === 'true' || s.recurring === true || s.recurring === 'true';
+      if (isRecurring) {
+        const recurringDay = (s.recurringDay || s.recurring_day || '').toUpperCase();
+        return recurringDay === dayOfWeek;
+      }
+
+      // Check for one-time schedules with date matching
+      const collectionDate = s.collection_date || s.collectionDateTime;
+      if (collectionDate) {
+        // Handle ISO format or other date formats
+        const scheduleDate = new Date(collectionDate);
+        if (!isNaN(scheduleDate.getTime())) {
+          return scheduleDate.getFullYear() === currentYear &&
+                 scheduleDate.getMonth() === currentMonth &&
+                 scheduleDate.getDate() === displayDay;
+        }
+        // Fallback to string comparison
+        return collectionDate.startsWith(dateStr);
+      }
+      return false;
+    });
+  };
+
+  const getSchedulesForDate = (dayNum) => {
+    const displayDay = dayNum + 1;
+    const checkDate = new Date(currentYear, currentMonth, displayDay);
+    const dayOfWeek = dayNames[checkDate.getDay()];
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(displayDay).padStart(2, '0')}`;
+
+    return barangaySchedules.filter(s => {
+      const isActive = s.isActive !== undefined ? s.isActive : (s.active !== undefined ? s.active : true);
+      if (!isActive) return false;
+
+      const isRecurring = s.isRecurring === true || s.isRecurring === 'true' || s.recurring === true || s.recurring === 'true';
+      if (isRecurring) {
+        const recurringDay = (s.recurringDay || s.recurring_day || '').toUpperCase();
+        return recurringDay === dayOfWeek;
+      }
+
+      const collectionDate = s.collection_date || s.collectionDateTime;
+      if (collectionDate) {
+        const scheduleDate = new Date(collectionDate);
+        if (!isNaN(scheduleDate.getTime())) {
+          return scheduleDate.getFullYear() === currentYear &&
+                 scheduleDate.getMonth() === currentMonth &&
+                 scheduleDate.getDate() === displayDay;
+        }
+        return collectionDate.startsWith(dateStr);
+      }
+      return false;
+    });
+  };
+
+  const handleDateClick = (dayNum) => {
+    const schedules = getSchedulesForDate(dayNum);
+    if (schedules.length > 0) {
+      const displayDay = dayNum + 1;
+      const dateLabel = new Date(currentYear, currentMonth, displayDay).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      setSelectedDateSchedules(schedules);
+      setSelectedDateLabel(dateLabel);
+      setScheduleDialogOpen(true);
+    }
+  };
+
+  const formatScheduleTime = (schedule) => {
+    if (schedule.recurringTime) {
+      const [hours, minutes] = schedule.recurringTime.split(':');
+      const hour = parseInt(hours, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes} ${ampm}`;
+    }
+    if (schedule.collectionDateTime) {
+      const date = new Date(schedule.collectionDateTime);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+    return 'N/A';
   };
 
   const StatCard = ({ title, value, icon: Icon, gradient, percentage, delay }) => (
@@ -691,7 +797,7 @@ const AdminDashboard = () => {
                               zIndex: 10,
                             },
                           }}
-                          onClick={() => isBooked && navigate('/collection-schedule')}
+                          onClick={() => isBooked && handleDateClick(dayNum)}
                         >
                           {isValid && (
                             <>
@@ -737,6 +843,157 @@ const AdminDashboard = () => {
           </Grid>
         </Box>
       </Box>
+
+      {/* Schedule Details Dialog */}
+      <Dialog
+        open={scheduleDialogOpen}
+        onClose={() => setScheduleDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            overflow: 'hidden',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
+          color: 'white',
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+        }}>
+          <CalendarTodayIcon />
+          Schedules for {selectedDateLabel}
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {selectedDateSchedules.length === 0 ? (
+            <Box sx={{ p: 4, textAlign: 'center' }}>
+              <Typography color="text.secondary">No schedules found for this date.</Typography>
+            </Box>
+          ) : (
+            <List sx={{ py: 0 }}>
+              {selectedDateSchedules.map((schedule, index) => {
+                const isRecurring = schedule.isRecurring === true || schedule.isRecurring === 'true' || schedule.recurring === true || schedule.recurring === 'true';
+                const wasteType = schedule.wasteType || schedule.waste_type || 'NON_BIODEGRADABLE';
+                const isBiodegradable = wasteType === 'BIODEGRADABLE';
+                
+                return (
+                  <React.Fragment key={schedule.scheduleId || schedule.id || index}>
+                    {index > 0 && <Divider />}
+                    <ListItem
+                      sx={{
+                        py: 2.5,
+                        px: 3,
+                        '&:hover': {
+                          bgcolor: '#f5f5f5',
+                        },
+                      }}
+                    >
+                      <ListItemIcon>
+                        <Box
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: '12px',
+                            bgcolor: isBiodegradable ? '#e8f5e9' : '#ffebee',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <RecyclingIcon sx={{ color: isBiodegradable ? '#43a047' : '#e53935', fontSize: 24 }} />
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography sx={{ fontWeight: 700, color: '#1b5e20' }}>
+                              {schedule.barangayName || schedule.barangay_name || 'Unknown Barangay'}
+                            </Typography>
+                            {isRecurring && (
+                              <Chip
+                                icon={<RepeatIcon sx={{ fontSize: 14 }} />}
+                                label="Recurring"
+                                size="small"
+                                sx={{
+                                  bgcolor: '#e3f2fd',
+                                  color: '#1976d2',
+                                  fontWeight: 600,
+                                  fontSize: '0.7rem',
+                                  height: 24,
+                                }}
+                              />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <AccessTimeIcon sx={{ fontSize: 14, color: '#757575' }} />
+                              <Typography variant="body2" sx={{ color: '#757575' }}>
+                                {formatScheduleTime(schedule)}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={isBiodegradable ? 'Biodegradable' : 'Non-Biodegradable'}
+                              size="small"
+                              sx={{
+                                bgcolor: isBiodegradable ? '#e8f5e9' : '#ffebee',
+                                color: isBiodegradable ? '#2e7d32' : '#c62828',
+                                fontWeight: 600,
+                                fontSize: '0.7rem',
+                                width: 'fit-content',
+                                height: 22,
+                              }}
+                            />
+                            {schedule.notes && (
+                              <Typography variant="body2" sx={{ color: '#757575', fontStyle: 'italic', mt: 0.5 }}>
+                                {schedule.notes}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  </React.Fragment>
+                );
+              })}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #e0e0e0' }}>
+          <Button
+            onClick={() => setScheduleDialogOpen(false)}
+            sx={{
+              color: '#757575',
+              fontWeight: 600,
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setScheduleDialogOpen(false);
+              navigate('/collection-schedule');
+            }}
+            sx={{
+              background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
+              fontWeight: 600,
+              borderRadius: '10px',
+              px: 3,
+              '&:hover': {
+                background: 'linear-gradient(135deg, #388e3c 0%, #43a047 100%)',
+              },
+            }}
+          >
+            View All Schedules
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 };
