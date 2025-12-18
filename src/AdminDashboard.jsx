@@ -978,7 +978,7 @@ const AdminDashboard = () => {
             variant="contained"
             onClick={() => {
               setScheduleDialogOpen(false);
-              navigate('/collection-schedule');
+              navigate('/schedule');
             }}
             sx={{
               background: 'linear-gradient(135deg, #43a047 0%, #66bb6a 100%)',
